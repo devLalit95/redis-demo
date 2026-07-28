@@ -1,0 +1,114 @@
+package com.example.redisdemo.controller;
+
+import com.example.redisdemo.dto.ApiResponse;
+import com.example.redisdemo.metrics.DashboardService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+/**
+ * Dashboard Controller
+ * 
+ * This controller provides HTTP endpoints for dashboard metrics.
+ * This is Phase 8 of the project - Dashboard Backend APIs.
+ * 
+ * WHY this controller exists:
+ * - Provides HTTP interface to dashboard metrics
+ * - Shows real-time system performance
+ * - Displays cache effectiveness
+ * - Enables monitoring and analytics
+ * 
+ * WHEN to use this controller:
+ * - Phase 8: Dashboard implementation
+ * - Real-time monitoring
+ * - Performance tracking
+ * - System health checks
+ */
+@RestController
+@RequestMapping("/api/dashboard")
+@RequiredArgsConstructor
+@Slf4j
+public class DashboardController {
+
+    private final DashboardService dashboardService;
+
+    /**
+     * Get dashboard metrics.
+     * 
+     * DEMONSTRATES:
+     * - Real-time metrics collection
+     * - System performance monitoring
+     * - Cache effectiveness tracking
+     * 
+     * @return ApiResponse with dashboard metrics and response time
+     */
+    @GetMapping("/metrics")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardMetrics() {
+        long startTime = System.currentTimeMillis();
+        
+        log.info("DASHBOARD: GET /api/dashboard/metrics");
+        
+        Map<String, Object> metrics = dashboardService.getDashboardMetrics();
+        
+        long responseTime = System.currentTimeMillis() - startTime;
+        
+        return ResponseEntity.ok(ApiResponse.success(metrics, responseTime));
+    }
+
+    /**
+     * Get detailed performance statistics.
+     * 
+     * @return ApiResponse with performance stats and response time
+     */
+    @GetMapping("/performance")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getPerformanceStats() {
+        long startTime = System.currentTimeMillis();
+        
+        log.info("DASHBOARD: GET /api/dashboard/performance");
+        
+        Map<String, Object> stats = dashboardService.getPerformanceStats();
+        
+        long responseTime = System.currentTimeMillis() - startTime;
+        
+        return ResponseEntity.ok(ApiResponse.success(stats, responseTime));
+    }
+
+    /**
+     * Get system health status.
+     * 
+     * @return ApiResponse with system health and response time
+     */
+    @GetMapping("/health")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSystemHealth() {
+        long startTime = System.currentTimeMillis();
+        
+        log.info("DASHBOARD: GET /api/dashboard/health");
+        
+        Map<String, Object> health = dashboardService.getSystemHealth();
+        
+        long responseTime = System.currentTimeMillis() - startTime;
+        
+        return ResponseEntity.ok(ApiResponse.success(health, responseTime));
+    }
+
+    /**
+     * Reset dashboard metrics.
+     * 
+     * @return ApiResponse with confirmation and response time
+     */
+    @PostMapping("/reset")
+    public ResponseEntity<ApiResponse<String>> resetMetrics() {
+        long startTime = System.currentTimeMillis();
+        
+        log.info("DASHBOARD: POST /api/dashboard/reset");
+        
+        dashboardService.resetMetrics();
+        
+        long responseTime = System.currentTimeMillis() - startTime;
+        
+        return ResponseEntity.ok(ApiResponse.success("Dashboard metrics reset successfully", responseTime));
+    }
+}

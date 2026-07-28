@@ -1,0 +1,429 @@
+package com.example.redisdemo.cache;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Cache Invalidation Service
+ * 
+ * This service demonstrates different cache invalidation strategies.
+ * This is Phase 11 of the project - Cache Invalidation.
+ * 
+ * WHY this service exists:
+ * - Teaches cache invalidation strategies
+ * - Shows when and how to invalidate cache
+ * - Demonstrates different invalidation patterns
+ * - Helps maintain cache consistency
+ * 
+ * WHEN to use this service:
+ * - Phase 11: Learning cache invalidation
+ * - Understanding cache consistency
+ * - Implementing invalidation strategies
+ * - Production cache management
+ * 
+ * PRODUCTION USE CASES:
+ * - Data updates requiring cache refresh
+ * - Cache consistency maintenance
+ * - Cache warming strategies
+ * - Cache cleanup operations
+ * 
+ * CACHE INVALIDATION STRATEGIES COVERED:
+ * - Delete one cache: Single entry invalidation
+ * - Delete all cache: Bulk invalidation
+ * - Evict after update: Write-through invalidation
+ * - Evict after delete: Cleanup on deletion
+ * - Refresh cache: Cache warming
+ * - Lazy loading: On-demand cache population
+ * - Write Through: Update cache immediately
+ * - Cache Aside: Manual cache management
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class CacheInvalidationService {
+
+    // Removed StudentRepository dependency for Redis-only testing
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    // ==================== DELETE ONE CACHE ====================
+
+    /**
+     * Delete one cache entry by ID.
+     * 
+     * WHY this method exists:
+     * - Shows single entry invalidation
+     - Most common invalidation pattern
+     - Essential for data consistency
+     * 
+     * WHEN to use this method:
+     * - After single record update
+     * - Targeted cache invalidation
+     * - Precise cache management
+     * 
+     * PRODUCTION USE CASES:
+     * - User profile updates
+     * - Single record changes
+     * - Targeted cache refresh
+     * 
+     * @param id The student ID
+     */
+    @CacheEvict(cacheNames = "students", key = "#id")
+    public void evictStudentCache(Long id) {
+        log.info("Cache Invalidation: Evicting student cache for ID: {}", id);
+        log.info("Strategy: Delete one cache");
+        log.info("Annotation: @CacheEvict(cacheNames = 'students', key = #id)");
+    }
+
+    /**
+     * Delete one cache entry by email.
+     * 
+     * @param email The student email
+     */
+    @CacheEvict(cacheNames = "students", key = "'email:' + #email")
+    public void evictStudentCacheByEmail(String email) {
+        log.info("Cache Invalidation: Evicting student cache for email: {}", email);
+        log.info("Strategy: Delete one cache by email");
+    }
+
+    // ==================== DELETE ALL CACHE ====================
+
+    /**
+     * Delete all cache entries.
+     * 
+     * WHY this method exists:
+     * - Shows bulk cache invalidation
+     * - Useful for major updates
+     * - Cache reset functionality
+     * 
+     * WHEN to use this method:
+     * - Bulk data updates
+     * - Cache warming
+     * - Maintenance operations
+     * 
+     * PRODUCTION USE CASES:
+     - Bulk imports
+     * - Cache warming
+     * - System maintenance
+     * Emergency cache clear
+     * 
+     * ⚠️ CAUTION: Can cause cache stampede if not careful
+     */
+    @CacheEvict(cacheNames = "students", allEntries = true)
+    public void evictAllStudentCache() {
+        log.info("Cache Invalidation: Evicting all student cache");
+        log.info("Strategy: Delete all cache");
+        log.info("Annotation: @CacheEvict(cacheNames = 'students', allEntries = true)");
+        log.warn("⚠️ All cache entries will be deleted");
+    }
+
+    // ==================== EVICT AFTER UPDATE ====================
+
+    /**
+     * Update student and evict cache.
+     * 
+     * WHY this method exists:
+     * - Shows write-through invalidation
+     - Updates database and cache together
+     * Maintains data consistency
+     * 
+     * WHEN to use this method:
+     * - Data updates requiring cache refresh
+     * - Strong consistency requirements
+     * - Real-time data needs
+     * 
+     * PRODUCTION USE CASES:
+     * - User profile updates
+     * - Critical data changes
+     * - Real-time applications
+     * 
+     * @param id The student ID
+     * @param studentDTO The updated student data
+     * @return The updated student DTO
+     */
+    @CachePut(cacheNames = "students", key = "#id")
+    public Object updateStudentWithEvict(Long id, Object studentDTO) {
+        log.info("Cache Invalidation: Update student with cache evict for ID: {}", id);
+        log.info("Strategy: Evict after update (Write-through)");
+        log.info("Annotation: @CachePut(cacheNames = 'students', key = #id)");
+        log.info("⚠️ Database operations disabled for Redis-only testing");
+        
+        // Return the input object as a placeholder
+        return studentDTO;
+    }
+
+    // ==================== EVICT AFTER DELETE ====================
+
+    /**
+     * Delete student and evict cache.
+     * 
+     * WHY this method exists:
+     * - Shows delete invalidation
+     * - Removes data and cache together
+     * Prevents accessing deleted data
+     * 
+     * WHEN to use this method:
+     * - Data deletion
+     * Cache cleanup
+     * Preventing stale data
+     * 
+     * PRODUCTION USE CASES:
+     * - Account deletion
+     * Data cleanup
+     * Cache consistency
+     * 
+     * @param id The student ID
+     */
+    @CacheEvict(cacheNames = "students", key = "#id")
+    public void deleteStudentWithEvict(Long id) {
+        log.info("Cache Invalidation: Delete student with cache evict for ID: {}", id);
+        log.info("Strategy: Evict after delete");
+        log.info("Annotation: @CacheEvict(cacheNames = 'students', key = #id)");
+        log.info("⚠️ Database operations disabled for Redis-only testing");
+    }
+
+    // ==================== REFRESH CACHE ====================
+
+    /**
+     * Refresh cache for a student.
+     * 
+     * WHY this method exists:
+     * - Shows cache warming
+     * - Preloads cache with fresh data
+     - Reduces cache misses
+     * 
+     * WHEN to use this method:
+     * - Cache warming
+     * - Scheduled refresh
+     * - Critical data preloading
+     * 
+     * PRODUCTION USE CASES:
+     * - Scheduled cache warming
+     * - Critical data preloading
+     * - Background refresh
+     * Performance optimization
+     * 
+     * @param id The student ID
+     * @return The student DTO
+     */
+    @CachePut(cacheNames = "students", key = "#id")
+    public Object refreshStudentCache(Long id) {
+        log.info("Cache Invalidation: Refreshing cache for student ID: {}", id);
+        log.info("Strategy: Refresh cache");
+        log.info("Annotation: @CachePut(cacheNames = 'students', key = #id)");
+        log.info("⚠️ Database operations disabled for Redis-only testing");
+        
+        // Return a placeholder object
+        return Map.of("id", id, "message", "Cache refreshed (placeholder)");
+    }
+
+    // ==================== LAZY LOADING ====================
+
+    /**
+     * Lazy load student into cache.
+     * 
+     * WHY this method exists:
+     * - Shows lazy loading pattern
+     - Loads data on first access
+     * - Reduces unnecessary cache population
+     * 
+     * WHEN to use this method:
+     * - On-demand caching
+     * Lazy initialization
+     * Resource optimization
+     * 
+     * PRODUCTION USE CASES:
+     * - Expensive operations
+     * - Rarely accessed data
+     * Resource optimization
+     * 
+     * @param id The student ID
+     * @return The student DTO
+     */
+    @Cacheable(cacheNames = "students", key = "#id")
+    public Object lazyLoadStudent(Long id) {
+        log.info("Cache Invalidation: Lazy loading student ID: {}", id);
+        log.info("Strategy: Lazy loading");
+        log.info("Annotation: @Cacheable(cacheNames = 'students', key = #id)");
+        log.info("🔄 This will only execute on cache miss");
+        log.info("⚠️ Database operations disabled for Redis-only testing");
+        
+        // Return a placeholder object
+        return Map.of("id", id, "message", "Lazy loaded (placeholder)");
+    }
+
+    // ==================== WRITE THROUGH ====================
+
+    /**
+     * Write through caching for student.
+     * 
+     * WHY this method exists:
+     * - Shows write-through pattern
+     * - Updates cache immediately on write
+     * Ensures cache is always fresh
+     * 
+     * WHEN to use this method:
+     * - Critical data requiring consistency
+     * - Real-time applications
+     * - Strong consistency needs
+     * 
+     * PRODUCTION USE CASES:
+     * - Critical user data
+     * - Real-time applications
+     * - Financial data
+     * Security-sensitive data
+     * 
+     * @param id The student ID
+     * @param studentDTO The student data
+     * @return The updated student DTO
+     */
+    @CachePut(cacheNames = "students", key = "#id")
+    public Object writeThroughStudent(Long id, Object studentDTO) {
+        log.info("Cache Invalidation: Write through for student ID: {}", id);
+        log.info("Strategy: Write through");
+        log.info("Annotation: @CachePut(cacheNames = 'students', key = #id)");
+        log.info("🔄 Cache will be updated immediately on write");
+        log.info("⚠️ Database operations disabled for Redis-only testing");
+        
+        // Return the input object as a placeholder
+        return studentDTO;
+    }
+
+    // ==================== CACHE ASIDE PATTERN ====================
+
+    /**
+     * Cache aside pattern implementation.
+     * 
+     * WHY this method exists:
+     * - Shows cache-aside pattern
+     * - Manual cache management
+     * - Most common caching pattern
+     * 
+     * WHEN to use this method:
+     * - Manual cache control
+     * - Complex caching logic
+     * - Fine-grained cache management
+     * 
+     * PRODUCTION USE CASES:
+     * - Custom caching logic
+     * - Complex invalidation strategies
+     * - Multi-level caching
+     * Cache warming
+     */
+    public Object cacheAsideStudent(Long id) {
+        log.info("Cache Invalidation: Cache aside for student ID: {}", id);
+        log.info("Strategy: Cache aside pattern");
+        
+        String cacheKey = "cache-aside:student:" + id;
+        
+        // Check cache first
+        Object cachedStudent = redisTemplate.opsForValue().get(cacheKey);
+        
+        if (cachedStudent != null) {
+            log.info("✅ CACHE HIT: Student found in cache");
+            return cachedStudent;
+        }
+        
+        // Cache miss - fetch from database
+        log.info("❌ CACHE MISS: Fetching from database");
+        log.info("⚠️ Database operations disabled for Redis-only testing");
+        
+        // Create a placeholder object
+        Object studentDTO = Map.of("id", id, "message", "Cache aside loaded (placeholder)");
+        
+        // Store in cache
+        redisTemplate.opsForValue().set(cacheKey, studentDTO, 5, TimeUnit.MINUTES);
+        log.info("✅ Student stored in cache");
+        
+        return studentDTO;
+    }
+
+    /**
+     * Get cache invalidation explanation.
+     * 
+     * @return Explanation of invalidation strategies
+     */
+    public String getCacheInvalidationExplanation() {
+        return """
+            Cache Invalidation Strategies:
+            
+            WHY CACHE INVALIDATION MATTERS:
+            - Maintains data consistency
+            - Prevents stale data
+            - Ensures cache accuracy
+            - Critical for data integrity
+            
+            INVALIDATION STRATEGIES:
+            
+            1. DELETE ONE CACHE:
+            - Remove specific cache entry
+            - Most common pattern
+            - Used for single record updates
+            - Efficient and precise
+            - Example: User profile update
+            
+            2. DELETE ALL CACHE:
+            - Remove all cache entries
+            - Used for bulk operations
+            - Can cause cache stampede
+            - Use with caution
+            - Example: Bulk import
+            
+            3. EVICT AFTER UPDATE:
+            - Cache updated immediately on write
+            - Write-through pattern
+            - Ensures cache freshness
+            - Example: Critical data updates
+            
+            4. EVICT AFTER DELETE:
+            - Cache removed on data deletion
+            - Prevents accessing deleted data
+            - Essential for consistency
+            - Example: Account deletion
+            
+            5. REFRESH CACHE:
+            - Preload cache with fresh data
+            - Cache warming
+            - Reduces cache misses
+            - Example: Scheduled refresh
+            
+            6. LAZY LOADING:
+            - Load data on first access
+     * - On-demand caching
+            - Resource efficient
+            - Example: Expensive operations
+            
+            7. WRITE THROUGH:
+            - Update cache immediately on write
+            - Strong consistency
+            - Always fresh cache
+            - Example: Critical data
+            
+            8. CACHE ASIDE:
+            - Manual cache management
+            - Application-controlled caching
+            - Most flexible pattern
+            - Example: Custom caching logic
+            
+            WHEN TO INVALIDATE:
+            - After data updates
+            - After data deletion
+            - On schedule (TTL-based)
+            - On cache warming
+            - On manual refresh
+            
+            INVALIDATION TRADE-OFFS:
+            - Precision vs Performance
+            - Consistency vs Complexity
+            - Freshness vs Efficiency
+            - Immediate vs Delayed
+            """;
+    }
+}
