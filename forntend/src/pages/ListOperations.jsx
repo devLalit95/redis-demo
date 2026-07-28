@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { 
-  Save, 
+  Plus, 
+  Minus, 
   Download, 
-  Trash2, 
-  Hash,
+  Trash2,
+  ArrowLeft,
+  ArrowRight,
   Clock,
 } from 'lucide-react';
 import { cn } from '../utils/cn';
@@ -14,112 +16,132 @@ import { Card, CardHeader, CardTitle, CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
-import Loader from '../components/ui/Loader';
 import Tabs from '../components/ui/Tabs';
 import { Heading, Text, Code as CodeBlock } from '../components/ui/Typography';
 import toast from 'react-hot-toast';
 
 /**
- * Hash Operations Page - Interactive Redis hash operations
+ * List Operations Page - Interactive Redis list operations
  */
-const HashOperations = () => {
-  const [activeTab, setActiveTab] = useState('set');
+const ListOperations = () => {
+  const [activeTab, setActiveTab] = useState('leftpush');
   const [key, setKey] = useState('');
-  const [field, setField] = useState('');
   const [value, setValue] = useState('');
   const [getKey, setGetKey] = useState('');
-  const [getField, setGetField] = useState('');
   const [result, setResult] = useState(null);
   const queryClient = useQueryClient();
   
-  // Set hash field mutation
-  const setHashFieldMutation = useMutation({
-    mutationFn: (data) => redisApi.hash.setHashField(data.key, data.field, data.value),
+  // Left push mutation
+  const leftPushMutation = useMutation({
+    mutationFn: (data) => redisApi.list.leftPush(data.key, data.value),
     onSuccess: (data) => {
       setResult(data);
-      toast.success('Hash field stored successfully');
+      toast.success('Element added to left of list');
       queryClient.invalidateQueries(['redis-db-size']);
     },
     onError: (error) => {
-      toast.error(error.userMessage || 'Failed to store hash field');
+      toast.error(error.userMessage || 'Failed to add element to left');
     },
   });
   
-  // Get hash field mutation
-  const getHashFieldMutation = useMutation({
-    mutationFn: ({ key, field }) => redisApi.hash.getHashField(key, field),
+  // Right push mutation
+  const rightPushMutation = useMutation({
+    mutationFn: (data) => redisApi.list.rightPush(data.key, data.value),
     onSuccess: (data) => {
       setResult(data);
-      toast.success('Hash field retrieved successfully');
-    },
-    onError: (error) => {
-      toast.error(error.userMessage || 'Failed to retrieve hash field');
-    },
-  });
-  
-  // Get all hash fields mutation
-  const getAllHashFieldsMutation = useMutation({
-    mutationFn: (key) => redisApi.hash.getAllHashFields(key),
-    onSuccess: (data) => {
-      setResult(data);
-      toast.success('All hash fields retrieved successfully');
-    },
-    onError: (error) => {
-      toast.error(error.userMessage || 'Failed to retrieve hash fields');
-    },
-  });
-  
-  // Delete hash field mutation
-  const deleteHashFieldMutation = useMutation({
-    mutationFn: ({ key, field }) => redisApi.hash.deleteHashField(key, field),
-    onSuccess: (data) => {
-      setResult(data);
-      toast.success('Hash field deleted successfully');
+      toast.success('Element added to right of list');
       queryClient.invalidateQueries(['redis-db-size']);
     },
     onError: (error) => {
-      toast.error(error.userMessage || 'Failed to delete hash field');
+      toast.error(error.userMessage || 'Failed to add element to right');
     },
   });
   
-  const handleSetHashField = (e) => {
+  // Get list mutation
+  const getListMutation = useMutation({
+    mutationFn: (key) => redisApi.list.getList(key),
+    onSuccess: (data) => {
+      setResult(data);
+      toast.success('List retrieved successfully');
+    },
+    onError: (error) => {
+      toast.error(error.userMessage || 'Failed to retrieve list');
+    },
+  });
+  
+  // Left pop mutation
+  const leftPopMutation = useMutation({
+    mutationFn: (key) => redisApi.list.leftPop(key),
+    onSuccess: (data) => {
+      setResult(data);
+      toast.success('Element popped from left');
+      queryClient.invalidateQueries(['redis-db-size']);
+    },
+    onError: (error) => {
+      toast.error(error.userMessage || 'Failed to pop from left');
+    },
+  });
+  
+  // Right pop mutation
+  const rightPopMutation = useMutation({
+    mutationFn: (key) => redisApi.list.rightPop(key),
+    onSuccess: (data) => {
+      setResult(data);
+      toast.success('Element popped from right');
+      queryClient.invalidateQueries(['redis-db-size']);
+    },
+    onError: (error) => {
+      toast.error(error.userMessage || 'Failed to pop from right');
+    },
+  });
+  
+  const handleLeftPush = (e) => {
     e.preventDefault();
-    if (!key || !field || !value) {
-      toast.error('Please provide key, field, and value');
+    if (!key || !value) {
+      toast.error('Please provide both key and value');
       return;
     }
-    setHashFieldMutation.mutate({ key, field, value });
+    leftPushMutation.mutate({ key, value });
   };
   
-  const handleGetHashField = () => {
-    if (!getKey || !getField) {
-      toast.error('Please provide key and field');
+  const handleRightPush = (e) => {
+    e.preventDefault();
+    if (!key || !value) {
+      toast.error('Please provide both key and value');
       return;
     }
-    getHashFieldMutation.mutate({ key: getKey, field: getField });
+    rightPushMutation.mutate({ key, value });
   };
   
-  const handleGetAllHashFields = () => {
+  const handleGetList = () => {
     if (!getKey) {
       toast.error('Please provide a key');
       return;
     }
-    getAllHashFieldsMutation.mutate(getKey);
+    getListMutation.mutate(getKey);
   };
   
-  const handleDeleteHashField = () => {
-    if (!getKey || !getField) {
-      toast.error('Please provide key and field');
+  const handleLeftPop = () => {
+    if (!getKey) {
+      toast.error('Please provide a key');
       return;
     }
-    deleteHashFieldMutation.mutate({ key: getKey, field: getField });
+    leftPopMutation.mutate(getKey);
+  };
+  
+  const handleRightPop = () => {
+    if (!getKey) {
+      toast.error('Please provide a key');
+      return;
+    }
+    rightPopMutation.mutate(getKey);
   };
   
   const tabs = [
     {
-      id: 'set',
-      label: 'Set Field',
-      icon: <Save className="w-4 h-4" />,
+      id: 'leftpush',
+      label: 'Left Push',
+      icon: <ArrowLeft className="w-4 h-4" />,
       content: (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -128,27 +150,20 @@ const HashOperations = () => {
         >
           <Card>
             <CardHeader>
-              <CardTitle>Store Hash Field</CardTitle>
+              <CardTitle>Add Element to Left (LPUSH)</CardTitle>
             </CardHeader>
             <CardBody>
-              <form onSubmit={handleSetHashField} className="space-y-4">
+              <form onSubmit={handleLeftPush} className="space-y-4">
                 <Input
-                  label="Key"
-                  placeholder="Enter hash key (e.g., user:1)"
+                  label="List Key"
+                  placeholder="Enter list key (e.g., queue)"
                   value={key}
                   onChange={(e) => setKey(e.target.value)}
                   required
                 />
                 <Input
-                  label="Field"
-                  placeholder="Enter field name (e.g., name)"
-                  value={field}
-                  onChange={(e) => setField(e.target.value)}
-                  required
-                />
-                <Input
                   label="Value"
-                  placeholder="Enter field value"
+                  placeholder="Enter value to add"
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
                   required
@@ -156,10 +171,10 @@ const HashOperations = () => {
                 <Button
                   type="submit"
                   variant="primary"
-                  loading={setHashFieldMutation.isPending}
-                  leftIcon={<Save className="w-4 h-4" />}
+                  loading={leftPushMutation.isPending}
+                  leftIcon={<ArrowLeft className="w-4 h-4" />}
                 >
-                  Store Field
+                  Push to Left
                 </Button>
               </form>
             </CardBody>
@@ -192,8 +207,76 @@ const HashOperations = () => {
       ),
     },
     {
-      id: 'get',
-      label: 'Get Field',
+      id: 'rightpush',
+      label: 'Right Push',
+      icon: <ArrowRight className="w-4 h-4" />,
+      content: (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Add Element to Right (RPUSH)</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <form onSubmit={handleRightPush} className="space-y-4">
+                <Input
+                  label="List Key"
+                  placeholder="Enter list key"
+                  value={key}
+                  onChange={(e) => setKey(e.target.value)}
+                  required
+                />
+                <Input
+                  label="Value"
+                  placeholder="Enter value to add"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  required
+                />
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={rightPushMutation.isPending}
+                  leftIcon={<ArrowRight className="w-4 h-4" />}
+                >
+                  Push to Right
+                </Button>
+              </form>
+            </CardBody>
+          </Card>
+          
+          {result && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Response</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={result.success ? 'success' : 'danger'}>
+                      {result.success ? 'Success' : 'Error'}
+                    </Badge>
+                    {result.responseTime && (
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        <Clock className="w-3 h-3 inline mr-1" />
+                        {result.responseTime}ms
+                      </span>
+                    )}
+                  </div>
+                  <CodeBlock>{JSON.stringify(result, null, 2)}</CodeBlock>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+        </motion.div>
+      ),
+    },
+    {
+      id: 'getlist',
+      label: 'Get List',
       icon: <Download className="w-4 h-4" />,
       content: (
         <motion.div
@@ -203,31 +286,24 @@ const HashOperations = () => {
         >
           <Card>
             <CardHeader>
-              <CardTitle>Retrieve Hash Field</CardTitle>
+              <CardTitle>Retrieve All List Elements (LRANGE)</CardTitle>
             </CardHeader>
             <CardBody>
               <div className="space-y-4">
                 <Input
-                  label="Key"
-                  placeholder="Enter hash key"
+                  label="List Key"
+                  placeholder="Enter list key"
                   value={getKey}
                   onChange={(e) => setGetKey(e.target.value)}
                   required
                 />
-                <Input
-                  label="Field"
-                  placeholder="Enter field name"
-                  value={getField}
-                  onChange={(e) => setGetField(e.target.value)}
-                  required
-                />
                 <Button
                   variant="primary"
-                  onClick={handleGetHashField}
-                  loading={getHashFieldMutation.isPending}
+                  onClick={handleGetList}
+                  loading={getListMutation.isPending}
                   leftIcon={<Download className="w-4 h-4" />}
                 >
-                  Get Field
+                  Get List
                 </Button>
               </div>
             </CardBody>
@@ -260,9 +336,9 @@ const HashOperations = () => {
       ),
     },
     {
-      id: 'getall',
-      label: 'Get All Fields',
-      icon: <Hash className="w-4 h-4" />,
+      id: 'leftpop',
+      label: 'Left Pop',
+      icon: <ArrowLeft className="w-4 h-4" />,
       content: (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -271,92 +347,85 @@ const HashOperations = () => {
         >
           <Card>
             <CardHeader>
-              <CardTitle>Retrieve All Hash Fields</CardTitle>
+              <CardTitle>Remove Element from Left (LPOP)</CardTitle>
             </CardHeader>
             <CardBody>
               <div className="space-y-4">
                 <Input
-                  label="Key"
-                  placeholder="Enter hash key"
+                  label="List Key"
+                  placeholder="Enter list key"
                   value={getKey}
                   onChange={(e) => setGetKey(e.target.value)}
-                  required
-                />
-                <Button
-                  variant="primary"
-                  onClick={handleGetAllHashFields}
-                  loading={getAllHashFieldsMutation.isPending}
-                  leftIcon={<Hash className="w-4 h-4" />}
-                >
-                  Get All Fields
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
-          
-          {result && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Response</CardTitle>
-              </CardHeader>
-              <CardBody>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={result.success ? 'success' : 'danger'}>
-                      {result.success ? 'Success' : 'Error'}
-                    </Badge>
-                    {result.responseTime && (
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        <Clock className="w-3 h-3 inline mr-1" />
-                        {result.responseTime}ms
-                      </span>
-                    )}
-                  </div>
-                  <CodeBlock>{JSON.stringify(result, null, 2)}</CodeBlock>
-                </div>
-              </CardBody>
-            </Card>
-          )}
-        </motion.div>
-      ),
-    },
-    {
-      id: 'delete',
-      label: 'Delete Field',
-      icon: <Trash2 className="w-4 h-4" />,
-      content: (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle>Delete Hash Field</CardTitle>
-            </CardHeader>
-            <CardBody>
-              <div className="space-y-4">
-                <Input
-                  label="Key"
-                  placeholder="Enter hash key"
-                  value={getKey}
-                  onChange={(e) => setGetKey(e.target.value)}
-                  required
-                />
-                <Input
-                  label="Field"
-                  placeholder="Enter field name"
-                  value={getField}
-                  onChange={(e) => setGetField(e.target.value)}
                   required
                 />
                 <Button
                   variant="danger"
-                  onClick={handleDeleteHashField}
-                  loading={deleteHashFieldMutation.isPending}
-                  leftIcon={<Trash2 className="w-4 h-4" />}
+                  onClick={handleLeftPop}
+                  loading={leftPopMutation.isPending}
+                  leftIcon={<ArrowLeft className="w-4 h-4" />}
                 >
-                  Delete Field
+                  Pop from Left
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
+          
+          {result && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Response</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={result.success ? 'success' : 'danger'}>
+                      {result.success ? 'Success' : 'Error'}
+                    </Badge>
+                    {result.responseTime && (
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        <Clock className="w-3 h-3 inline mr-1" />
+                        {result.responseTime}ms
+                      </span>
+                    )}
+                  </div>
+                  <CodeBlock>{JSON.stringify(result, null, 2)}</CodeBlock>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+        </motion.div>
+      ),
+    },
+    {
+      id: 'rightpop',
+      label: 'Right Pop',
+      icon: <ArrowRight className="w-4 h-4" />,
+      content: (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Remove Element from Right (RPOP)</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <div className="space-y-4">
+                <Input
+                  label="List Key"
+                  placeholder="Enter list key"
+                  value={getKey}
+                  onChange={(e) => setGetKey(e.target.value)}
+                  required
+                />
+                <Button
+                  variant="danger"
+                  onClick={handleRightPop}
+                  loading={rightPopMutation.isPending}
+                  leftIcon={<ArrowRight className="w-4 h-4" />}
+                >
+                  Pop from Right
                 </Button>
               </div>
             </CardBody>
@@ -394,14 +463,14 @@ const HashOperations = () => {
     <div className="space-y-6">
       {/* Page Header */}
       <div className="page-header">
-        <Heading level={1}>Hash Operations</Heading>
-        <Text>Perform Redis hash operations interactively</Text>
+        <Heading level={1}>List Operations</Heading>
+        <Text>Perform Redis list operations interactively</Text>
       </div>
       
       {/* Main Content */}
-      <Tabs tabs={tabs} defaultTab="set" onChange={setActiveTab} />
+      <Tabs tabs={tabs} defaultTab="leftpush" onChange={setActiveTab} />
     </div>
   );
 };
 
-export default HashOperations;
+export default ListOperations;

@@ -35,7 +35,7 @@ const CounterOperations = () => {
       toast.success('Counter incremented successfully');
     },
     onError: (error) => {
-      toast.error('Failed to increment counter');
+      toast.error(error.userMessage || 'Failed to increment counter');
     },
   });
   
@@ -47,7 +47,7 @@ const CounterOperations = () => {
       toast.success('Counter incremented successfully');
     },
     onError: (error) => {
-      toast.error('Failed to increment counter');
+      toast.error(error.userMessage || 'Failed to increment counter');
     },
   });
   
@@ -59,7 +59,7 @@ const CounterOperations = () => {
       toast.success('Counter decremented successfully');
     },
     onError: (error) => {
-      toast.error('Failed to decrement counter');
+      toast.error(error.userMessage || 'Failed to decrement counter');
     },
   });
   

@@ -227,6 +227,43 @@ export const redisCounterApi = {
   },
 };
 
+/**
+ * Key Operations
+ */
+export const redisKeyApi = {
+  /**
+   * Get keys matching pattern
+   */
+  getKeysByPattern: async (pattern = '*') => {
+    const response = await axiosInstance.get(`/api/redis/keys/${pattern}`);
+    return response.data;
+  },
+  
+  /**
+   * Delete a key
+   */
+  deleteKey: async (key) => {
+    const response = await axiosInstance.delete(`/api/redis/key/${key}`);
+    return response.data;
+  },
+  
+  /**
+   * Check if key exists
+   */
+  keyExists: async (key) => {
+    const response = await axiosInstance.get(`/api/redis/exists/${key}`);
+    return response.data;
+  },
+  
+  /**
+   * Get key type
+   */
+  getKeyType: async (key) => {
+    const response = await axiosInstance.get(`/api/redis/type/${key}`);
+    return response.data;
+  },
+};
+
 // Export all APIs as a single object
 export default {
   string: redisStringApi,
@@ -235,4 +272,5 @@ export default {
   set: redisSetApi,
   sortedSet: redisSortedSetApi,
   counter: redisCounterApi,
+  key: redisKeyApi,
 };

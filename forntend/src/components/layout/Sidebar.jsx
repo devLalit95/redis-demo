@@ -15,6 +15,8 @@ import {
   FileText,
   Hash,
   Plus,
+  List as ListIcon,
+  Layers as SetIcon,
 } from 'lucide-react';
 
 /**
@@ -34,6 +36,8 @@ const Sidebar = ({ isOpen, collapsed, onClose }) => {
         { name: 'Redis Explorer', href: '/redis-explorer', icon: Database },
         { name: 'String Operations', href: '/string-operations', icon: FileText },
         { name: 'Hash Operations', href: '/hash-operations', icon: Hash },
+        { name: 'List Operations', href: '/list-operations', icon: ListIcon },
+        { name: 'Set Operations', href: '/set-operations', icon: SetIcon },
         { name: 'Counter Operations', href: '/counter-operations', icon: Plus },
         { name: 'Cache Playground', href: '/cache-playground', icon: Layers },
       ],

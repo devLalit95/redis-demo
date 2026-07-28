@@ -21,6 +21,8 @@ import toast from 'react-hot-toast';
 
 /**
  * Cache Playground Page - Interactive cache invalidation demonstrations
+ * Note: This page requires database/student functionality which is currently disabled
+ * in Redis-only mode. The UI is available for demonstration purposes.
  */
 const CachePlayground = () => {
   const [activeTab, setActiveTab] = useState('evict');
@@ -28,6 +30,10 @@ const CachePlayground = () => {
   const [email, setEmail] = useState('');
   const [result, setResult] = useState(null);
   const queryClient = useQueryClient();
+  
+  const handleDisabledAction = () => {
+    toast.error('Database functionality is disabled in Redis-only mode. This feature requires database integration.');
+  };
   
   // Evict cache by ID mutation
   const evictCacheMutation = useMutation({
@@ -37,7 +43,7 @@ const CachePlayground = () => {
       toast.success('Cache evicted successfully');
     },
     onError: (error) => {
-      toast.error('Failed to evict cache');
+      toast.error(error.userMessage || 'Failed to evict cache');
     },
   });
   
@@ -49,7 +55,7 @@ const CachePlayground = () => {
       toast.success('Cache evicted successfully');
     },
     onError: (error) => {
-      toast.error('Failed to evict cache');
+      toast.error(error.userMessage || 'Failed to evict cache');
     },
   });
   
@@ -61,7 +67,7 @@ const CachePlayground = () => {
       toast.success('All cache evicted successfully');
     },
     onError: (error) => {
-      toast.error('Failed to evict all cache');
+      toast.error(error.userMessage || 'Failed to evict all cache');
     },
   });
   
@@ -73,7 +79,7 @@ const CachePlayground = () => {
       toast.success('Cache refreshed successfully');
     },
     onError: (error) => {
-      toast.error('Failed to refresh cache');
+      toast.error(error.userMessage || 'Failed to refresh cache');
     },
   });
   
@@ -85,7 +91,7 @@ const CachePlayground = () => {
       toast.success('Student lazy loaded successfully');
     },
     onError: (error) => {
-      toast.error('Failed to lazy load student');
+      toast.error(error.userMessage || 'Failed to lazy load student');
     },
   });
   
@@ -97,52 +103,32 @@ const CachePlayground = () => {
       toast.success('Cache aside pattern executed successfully');
     },
     onError: (error) => {
-      toast.error('Failed to execute cache aside pattern');
+      toast.error(error.userMessage || 'Failed to execute cache aside pattern');
     },
   });
   
   const handleEvictCache = () => {
-    if (!studentId) {
-      toast.error('Please provide a student ID');
-      return;
-    }
-    evictCacheMutation.mutate(studentId);
+    handleDisabledAction();
   };
   
   const handleEvictCacheByEmail = () => {
-    if (!email) {
-      toast.error('Please provide an email');
-      return;
-    }
-    evictCacheByEmailMutation.mutate(email);
+    handleDisabledAction();
   };
   
   const handleEvictAllCache = () => {
-    evictAllCacheMutation.mutate();
+    handleDisabledAction();
   };
   
   const handleRefreshCache = () => {
-    if (!studentId) {
-      toast.error('Please provide a student ID');
-      return;
-    }
-    refreshCacheMutation.mutate(studentId);
+    handleDisabledAction();
   };
   
   const handleLazyLoad = () => {
-    if (!studentId) {
-      toast.error('Please provide a student ID');
-      return;
-    }
-    lazyLoadMutation.mutate(studentId);
+    handleDisabledAction();
   };
   
   const handleCacheAside = () => {
-    if (!studentId) {
-      toast.error('Please provide a student ID');
-      return;
-    }
-    cacheAsideMutation.mutate(studentId);
+    handleDisabledAction();
   };
   
   const tabs = [
@@ -435,6 +421,27 @@ const CachePlayground = () => {
       <div className="page-header">
         <Heading level={1}>Cache Playground</Heading>
         <Text>Interactive cache invalidation and pattern demonstrations</Text>
+      </div>
+      
+      {/* Database Disabled Notice */}
+      <div className="bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-warning-100 dark:bg-warning-900/30 rounded-full flex items-center justify-center">
+              <Layers className="w-5 h-5 text-warning-600 dark:text-warning-400" />
+            </div>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-warning-900 dark:text-warning-100 mb-1">
+              Database Functionality Disabled
+            </h3>
+            <p className="text-sm text-warning-700 dark:text-warning-300">
+              This feature requires database integration (MySQL) which is currently disabled in Redis-only mode. 
+              The UI is available for demonstration purposes. To enable this feature, configure the database in 
+              <code className="bg-warning-100 dark:bg-warning-900/40 px-1.5 py-0.5 rounded mx-1">application.properties</code>.
+            </p>
+          </div>
+        </div>
       </div>
       
       {/* Main Content */}

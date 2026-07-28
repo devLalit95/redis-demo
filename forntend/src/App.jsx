@@ -11,6 +11,8 @@ import RedisMonitor from './pages/RedisMonitor';
 import HashOperations from './pages/HashOperations';
 import CounterOperations from './pages/CounterOperations';
 import CachePlayground from './pages/CachePlayground';
+import ListOperations from './pages/ListOperations';
+import SetOperations from './pages/SetOperations';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -54,6 +56,8 @@ function App() {
             <Route path="/redis-explorer" element={<RedisExplorer />} />
             <Route path="/string-operations" element={<StringOperations />} />
             <Route path="/hash-operations" element={<HashOperations />} />
+            <Route path="/list-operations" element={<ListOperations />} />
+            <Route path="/set-operations" element={<SetOperations />} />
             <Route path="/counter-operations" element={<CounterOperations />} />
             <Route path="/cache-playground" element={<CachePlayground />} />
             <Route path="/redis-monitor" element={<RedisMonitor />} />

@@ -68,37 +68,40 @@ axiosInstance.interceptors.response.use(
       
       // Handle specific status codes
       switch (status) {
+        case 400:
+          error.message = data?.message || 'Bad request. Please check your input.';
+          break;
         case 401:
-          // Unauthorized - handle token refresh or redirect
-          console.error('Unauthorized access');
+          error.message = 'Unauthorized access. Please authenticate.';
           break;
         case 403:
-          // Forbidden
-          console.error('Access forbidden');
+          error.message = 'Access forbidden. You don\'t have permission.';
           break;
         case 404:
-          // Not found
-          console.error('Resource not found');
+          error.message = 'Resource not found. Please check the endpoint.';
           break;
         case 500:
-          // Server error
-          console.error('Server error');
+          error.message = 'Server error. Please try again later.';
+          break;
+        case 503:
+          error.message = 'Service unavailable. Please try again later.';
           break;
         default:
-          console.error('API error occurred');
+          error.message = data?.message || error.message || 'An unexpected error occurred.';
       }
+      
+      error.userMessage = error.message;
     } else if (error.request) {
       // Request made but no response received - likely CORS or network error
       console.error('[API Network Error] No response received:', error.message);
-      console.error('This might be a CORS issue. Check backend CORS configuration.');
+      error.message = 'Network error. Please check your connection.';
+      error.userMessage = 'Network error. Please check your connection.';
+      error.code = 'ERR_NETWORK';
     } else {
       // Error in request configuration
       console.error('[API Request Config Error]:', error.message);
-    }
-    
-    // Add custom error code for easier identification in React Query
-    if (!error.response && error.request) {
-      error.code = 'ERR_NETWORK';
+      error.message = 'Request configuration error.';
+      error.userMessage = 'Request configuration error.';
     }
     
     return Promise.reject(error);
