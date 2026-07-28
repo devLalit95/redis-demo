@@ -1,0 +1,94 @@
+/* Scrollbar CSS - Custom scrollbar styling */
+
+/* Webkit scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.dark * {
+  scrollbar-color: #475569 transparent;
+}
+
+/* Custom scrollbar variants */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thick::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Colored scrollbars */
+.scrollbar-primary::-webkit-scrollbar-thumb {
+  background: #0ea5e9;
+}
+
+.scrollbar-primary::-webkit-scrollbar-thumb:hover {
+  background: #0284c7;
+}
+
+.scrollbar-secondary::-webkit-scrollbar-thumb {
+  background: #a855f7;
+}
+
+.scrollbar-secondary::-webkit-scrollbar-thumb:hover {
+  background: #9333ea;
+}
+
+.scrollbar-success::-webkit-scrollbar-thumb {
+  background: #22c55e;
+}
+
+.scrollbar-success::-webkit-scrollbar-thumb:hover {
+  background: #16a34a;
+}
+
+.scrollbar-danger::-webkit-scrollbar-thumb {
+  background: #ef4444;
+}
+
+.scrollbar-danger::-webkit-scrollbar-thumb:hover {
+  background: #dc2626;
+}
