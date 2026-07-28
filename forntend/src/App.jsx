@@ -16,13 +16,27 @@ import CachePlayground from './pages/CachePlayground';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 3,
+      retry: (failureCount, error) => {
+        // Don't retry on CORS/network errors
+        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+          return false;
+        }
+        // Retry up to 3 times for other errors
+        return failureCount < 3;
+      },
       retryDelay: 1000,
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000, // 5 minutes
     },
     mutations: {
-      retry: 1,
+      retry: (failureCount, error) => {
+        // Don't retry on CORS/network errors
+        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+          return false;
+        }
+        // Retry once for other errors
+        return failureCount < 1;
+      },
     },
   },
 });

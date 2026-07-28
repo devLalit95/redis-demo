@@ -4,14 +4,15 @@
  */
 
 const API_CONFIG = {
-  // Base URL from environment or fallback to localhost
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  // Base URL - use empty string for Vite proxy in development, or full URL for production
+  // In development with Vite proxy, use relative path. In production, use full backend URL.
+  BASE_URL: import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'),
   
   // API timeout in milliseconds
   TIMEOUT: 30000,
   
-  // Retry configuration
-  RETRY_COUNT: 3,
+  // Retry configuration (reduced to prevent spam on CORS errors)
+  RETRY_COUNT: 2,
   RETRY_DELAY: 1000,
   
   // API endpoints

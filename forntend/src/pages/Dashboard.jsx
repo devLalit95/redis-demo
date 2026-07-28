@@ -42,7 +42,14 @@ const Dashboard = () => {
     refetchInterval: 15000, // Refresh every 15 seconds
   });
   
-  const isLoading = metricsLoading || healthLoading || redisInfoLoading;
+  // Fetch database size
+  const { data: dbSize, isLoading: dbSizeLoading } = useQuery({
+    queryKey: ['db-size'],
+    queryFn: monitoringApi.getDatabaseSize,
+    refetchInterval: 20000, // Refresh every 20 seconds
+  });
+  
+  const isLoading = metricsLoading || healthLoading || redisInfoLoading || dbSizeLoading;
   
   if (isLoading) {
     return (
@@ -73,7 +80,7 @@ const Dashboard = () => {
   const metricCards = [
     {
       title: 'Total Keys',
-      value: metrics?.data?.totalKeys || dbSize?.data || 0,
+      value: metrics?.data?.totalKeys || dbSize?.data || redisInfo?.data?.db0?.split(',')[0]?.split('=')[1] || 0,
       icon: Database,
       color: 'primary',
       change: '+12%',

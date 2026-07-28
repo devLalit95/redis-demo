@@ -12,6 +12,9 @@ import API_CONFIG from '../../config/api';
 const axiosInstance = axios.create({
   baseURL: API_CONFIG.BASE_URL,
   timeout: API_CONFIG.TIMEOUT,
+  // Only use withCredentials in production or when not using proxy
+  // In development with Vite proxy, credentials are handled by the proxy
+  withCredentials: !import.meta.env.DEV,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -85,11 +88,17 @@ axiosInstance.interceptors.response.use(
           console.error('API error occurred');
       }
     } else if (error.request) {
-      // Request made but no response received
+      // Request made but no response received - likely CORS or network error
       console.error('[API Network Error] No response received:', error.message);
+      console.error('This might be a CORS issue. Check backend CORS configuration.');
     } else {
       // Error in request configuration
       console.error('[API Request Config Error]:', error.message);
+    }
+    
+    // Add custom error code for easier identification in React Query
+    if (!error.response && error.request) {
+      error.code = 'ERR_NETWORK';
     }
     
     return Promise.reject(error);
