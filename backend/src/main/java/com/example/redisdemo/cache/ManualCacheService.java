@@ -85,70 +85,78 @@ public class ManualCacheService {
         
         log.info("🔵 MANUAL CACHE: Fetching student ID: {}", id);
         
-        // Step 1: Check Redis cache
-        long redisStartTime = System.currentTimeMillis();
-        Object cachedStudent = redisTemplate.opsForValue().get(cacheKey);
-        long redisTime = System.currentTimeMillis() - redisStartTime;
-        
-        if (cachedStudent != null) {
-            // CACHE HIT
+        try {
+            // Step 1: Check Redis cache
+            long redisStartTime = System.currentTimeMillis();
+            Object cachedStudent = redisTemplate.opsForValue().get(cacheKey);
+            long redisTime = System.currentTimeMillis() - redisStartTime;
+            
+            if (cachedStudent != null) {
+                // CACHE HIT
+                long executionTime = System.currentTimeMillis() - startTime;
+                
+                cacheStatisticsService.recordCacheHit("MANUAL", executionTime);
+                
+                ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                        .executionTime(executionTime + " ms")
+                        .databaseTime("0 ms")
+                        .redisTime(redisTime + " ms")
+                        .cacheHit(true)
+                        .cacheMiss(false)
+                        .cacheType("MANUAL")
+                        .dataSource("REDIS")
+                        .timestamp(System.currentTimeMillis())
+                        .build();
+                
+                log.info("✅ CACHE HIT: Student found in Redis for ID: {} in {}ms", id, executionTime);
+                
+                StudentDTO studentDTO = (StudentDTO) cachedStudent;
+                return ApiResponse.success(studentDTO, metadata, "Student fetched from manual cache");
+            }
+            
+            // CACHE MISS - Fetch from database
+            log.info("❌ CACHE MISS: Student not found in Redis for ID: {}", id);
+            
+            long dbStartTime = System.currentTimeMillis();
+            Student student = studentRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
+            long dbTime = System.currentTimeMillis() - dbStartTime;
+            
+            StudentDTO studentDTO = mapToDTO(student);
+            
+            // Store in Redis cache
+            long redisWriteStartTime = System.currentTimeMillis();
+            redisTemplate.opsForValue().set(cacheKey, studentDTO, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
+            long redisWriteTime = System.currentTimeMillis() - redisWriteStartTime;
+            
             long executionTime = System.currentTimeMillis() - startTime;
             
-            cacheStatisticsService.recordCacheHit("MANUAL", executionTime);
+            cacheStatisticsService.recordCacheMiss("MANUAL", executionTime);
+            cacheStatisticsService.recordRedisWrite("MANUAL");
             
             ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
                     .executionTime(executionTime + " ms")
-                    .databaseTime("0 ms")
-                    .redisTime(redisTime + " ms")
-                    .cacheHit(true)
-                    .cacheMiss(false)
+                    .databaseTime(dbTime + " ms")
+                    .redisTime((redisTime + redisWriteTime) + " ms")
+                    .cacheHit(false)
+                    .cacheMiss(true)
                     .cacheType("MANUAL")
-                    .dataSource("REDIS")
+                    .dataSource("MYSQL")
                     .timestamp(System.currentTimeMillis())
                     .build();
             
-            log.info("✅ CACHE HIT: Student found in Redis for ID: {} in {}ms", id, executionTime);
+            log.info("✅ Student stored in Redis cache with TTL: {} seconds", CACHE_TTL_SECONDS);
+            log.info("🔵 MANUAL CACHE: Student fetched in {}ms (DB: {}ms, Redis: {}ms)", 
+                    executionTime, dbTime, redisTime + redisWriteTime);
             
-            StudentDTO studentDTO = (StudentDTO) cachedStudent;
-            return ApiResponse.success(studentDTO, metadata, "Student fetched from manual cache");
+            return ApiResponse.success(studentDTO, metadata, "Student fetched from database and cached");
+        } catch (ResourceNotFoundException e) {
+            log.error("❌ Student not found: {}", e.getMessage());
+            return ApiResponse.error("Student not found with ID: " + id);
+        } catch (Exception e) {
+            log.error("❌ ERROR in manual cache getStudentById: {}", e.getMessage(), e);
+            return ApiResponse.error("Error fetching student: " + e.getMessage());
         }
-        
-        // CACHE MISS - Fetch from database
-        log.info("❌ CACHE MISS: Student not found in Redis for ID: {}", id);
-        
-        long dbStartTime = System.currentTimeMillis();
-        Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
-        long dbTime = System.currentTimeMillis() - dbStartTime;
-        
-        StudentDTO studentDTO = mapToDTO(student);
-        
-        // Store in Redis cache
-        long redisWriteStartTime = System.currentTimeMillis();
-        redisTemplate.opsForValue().set(cacheKey, studentDTO, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
-        long redisWriteTime = System.currentTimeMillis() - redisWriteStartTime;
-        
-        long executionTime = System.currentTimeMillis() - startTime;
-        
-        cacheStatisticsService.recordCacheMiss("MANUAL", executionTime);
-        cacheStatisticsService.recordRedisWrite("MANUAL");
-        
-        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
-                .executionTime(executionTime + " ms")
-                .databaseTime(dbTime + " ms")
-                .redisTime((redisTime + redisWriteTime) + " ms")
-                .cacheHit(false)
-                .cacheMiss(true)
-                .cacheType("MANUAL")
-                .dataSource("MYSQL")
-                .timestamp(System.currentTimeMillis())
-                .build();
-        
-        log.info("✅ Student stored in Redis cache with TTL: {} seconds", CACHE_TTL_SECONDS);
-        log.info("🔵 MANUAL CACHE: Student fetched in {}ms (DB: {}ms, Redis: {}ms)", 
-                executionTime, dbTime, redisTime + redisWriteTime);
-        
-        return ApiResponse.success(studentDTO, metadata, "Student fetched from database and cached");
     }
 
     /**
@@ -163,71 +171,76 @@ public class ManualCacheService {
         
         log.info("🔵 MANUAL CACHE: Fetching all students");
         
-        // Check cache
-        long redisStartTime = System.currentTimeMillis();
-        Object cachedStudents = redisTemplate.opsForValue().get(cacheKey);
-        long redisTime = System.currentTimeMillis() - redisStartTime;
-        
-        if (cachedStudents != null) {
+        try {
+            // Check cache
+            long redisStartTime = System.currentTimeMillis();
+            Object cachedStudents = redisTemplate.opsForValue().get(cacheKey);
+            long redisTime = System.currentTimeMillis() - redisStartTime;
+            
+            if (cachedStudents != null) {
+                long executionTime = System.currentTimeMillis() - startTime;
+                
+                cacheStatisticsService.recordCacheHit("MANUAL", executionTime);
+                
+                ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                        .executionTime(executionTime + " ms")
+                        .databaseTime("0 ms")
+                        .redisTime(redisTime + " ms")
+                        .cacheHit(true)
+                        .cacheMiss(false)
+                        .cacheType("MANUAL")
+                        .dataSource("REDIS")
+                        .timestamp(System.currentTimeMillis())
+                        .build();
+                
+                log.info("✅ CACHE HIT: All students found in Redis in {}ms", executionTime);
+                
+                @SuppressWarnings("unchecked")
+                List<StudentDTO> studentDTOs = (List<StudentDTO>) cachedStudents;
+                return ApiResponse.success(studentDTOs, metadata, "All students fetched from manual cache");
+            }
+            
+            // Cache miss
+            log.info("❌ CACHE MISS: All students not found in Redis");
+            
+            long dbStartTime = System.currentTimeMillis();
+            List<Student> students = studentRepository.findAll();
+            long dbTime = System.currentTimeMillis() - dbStartTime;
+            
+            List<StudentDTO> studentDTOs = students.stream()
+                    .map(this::mapToDTO)
+                    .collect(Collectors.toList());
+            
+            // Store in cache
+            long redisWriteStartTime = System.currentTimeMillis();
+            redisTemplate.opsForValue().set(cacheKey, studentDTOs, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
+            long redisWriteTime = System.currentTimeMillis() - redisWriteStartTime;
+            
             long executionTime = System.currentTimeMillis() - startTime;
             
-            cacheStatisticsService.recordCacheHit("MANUAL", executionTime);
+            cacheStatisticsService.recordCacheMiss("MANUAL", executionTime);
+            cacheStatisticsService.recordRedisWrite("MANUAL");
             
             ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
                     .executionTime(executionTime + " ms")
-                    .databaseTime("0 ms")
-                    .redisTime(redisTime + " ms")
-                    .cacheHit(true)
-                    .cacheMiss(false)
+                    .databaseTime(dbTime + " ms")
+                    .redisTime((redisTime + redisWriteTime) + " ms")
+                    .cacheHit(false)
+                    .cacheMiss(true)
                     .cacheType("MANUAL")
-                    .dataSource("REDIS")
+                    .dataSource("MYSQL")
                     .timestamp(System.currentTimeMillis())
                     .build();
             
-            log.info("✅ CACHE HIT: All students found in Redis in {}ms", executionTime);
+            log.info("✅ All students stored in Redis cache");
+            log.info("🔵 MANUAL CACHE: Fetched {} students in {}ms (DB: {}ms, Redis: {}ms)", 
+                    studentDTOs.size(), executionTime, dbTime, redisTime + redisWriteTime);
             
-            @SuppressWarnings("unchecked")
-            List<StudentDTO> studentDTOs = (List<StudentDTO>) cachedStudents;
-            return ApiResponse.success(studentDTOs, metadata, "All students fetched from manual cache");
+            return ApiResponse.success(studentDTOs, metadata, "All students fetched from database and cached");
+        } catch (Exception e) {
+            log.error("❌ ERROR in manual cache getAllStudents: {}", e.getMessage(), e);
+            return ApiResponse.error("Error fetching students: " + e.getMessage());
         }
-        
-        // Cache miss
-        log.info("❌ CACHE MISS: All students not found in Redis");
-        
-        long dbStartTime = System.currentTimeMillis();
-        List<Student> students = studentRepository.findAll();
-        long dbTime = System.currentTimeMillis() - dbStartTime;
-        
-        List<StudentDTO> studentDTOs = students.stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
-        
-        // Store in cache
-        long redisWriteStartTime = System.currentTimeMillis();
-        redisTemplate.opsForValue().set(cacheKey, studentDTOs, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
-        long redisWriteTime = System.currentTimeMillis() - redisWriteStartTime;
-        
-        long executionTime = System.currentTimeMillis() - startTime;
-        
-        cacheStatisticsService.recordCacheMiss("MANUAL", executionTime);
-        cacheStatisticsService.recordRedisWrite("MANUAL");
-        
-        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
-                .executionTime(executionTime + " ms")
-                .databaseTime(dbTime + " ms")
-                .redisTime((redisTime + redisWriteTime) + " ms")
-                .cacheHit(false)
-                .cacheMiss(true)
-                .cacheType("MANUAL")
-                .dataSource("MYSQL")
-                .timestamp(System.currentTimeMillis())
-                .build();
-        
-        log.info("✅ All students stored in Redis cache");
-        log.info("🔵 MANUAL CACHE: Fetched {} students in {}ms (DB: {}ms, Redis: {}ms)", 
-                studentDTOs.size(), executionTime, dbTime, redisTime + redisWriteTime);
-        
-        return ApiResponse.success(studentDTOs, metadata, "All students fetched from database and cached");
     }
 
     /**

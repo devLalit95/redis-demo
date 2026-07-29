@@ -73,30 +73,38 @@ public class SpringCacheService {
         log.info("🟢 SPRING CACHE: Fetching student ID: {}", id);
         log.info("🔄 This method executes only on cache miss");
         
-        long dbStartTime = System.currentTimeMillis();
-        Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
-        long dbTime = System.currentTimeMillis() - dbStartTime;
-        
-        StudentDTO studentDTO = mapToDTO(student);
-        long executionTime = System.currentTimeMillis() - startTime;
-        
-        cacheStatisticsService.recordCacheMiss("SPRING", executionTime);
-        
-        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
-                .executionTime(executionTime + " ms")
-                .databaseTime(dbTime + " ms")
-                .redisTime("0 ms")
-                .cacheHit(false)
-                .cacheMiss(true)
-                .cacheType("SPRING")
-                .dataSource("MYSQL")
-                .timestamp(System.currentTimeMillis())
-                .build();
-        
-        log.info("🟢 SPRING CACHE: Student fetched in {}ms (Database: {}ms)", executionTime, dbTime);
-        
-        return ApiResponse.success(studentDTO, metadata, "Student fetched from database and cached with @Cacheable");
+        try {
+            long dbStartTime = System.currentTimeMillis();
+            Student student = studentRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
+            long dbTime = System.currentTimeMillis() - dbStartTime;
+            
+            StudentDTO studentDTO = mapToDTO(student);
+            long executionTime = System.currentTimeMillis() - startTime;
+            
+            cacheStatisticsService.recordCacheMiss("SPRING", executionTime);
+            
+            ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                    .executionTime(executionTime + " ms")
+                    .databaseTime(dbTime + " ms")
+                    .redisTime("0 ms")
+                    .cacheHit(false)
+                    .cacheMiss(true)
+                    .cacheType("SPRING")
+                    .dataSource("MYSQL")
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+            
+            log.info("🟢 SPRING CACHE: Student fetched in {}ms (Database: {}ms)", executionTime, dbTime);
+            
+            return ApiResponse.success(studentDTO, metadata, "Student fetched from database and cached with @Cacheable");
+        } catch (ResourceNotFoundException e) {
+            log.error("❌ Student not found: {}", e.getMessage());
+            return ApiResponse.error("Student not found with ID: " + id);
+        } catch (Exception e) {
+            log.error("❌ ERROR in spring cache getStudentById: {}", e.getMessage(), e);
+            return ApiResponse.error("Error fetching student: " + e.getMessage());
+        }
     }
 
     /**
@@ -157,33 +165,38 @@ public class SpringCacheService {
         log.info("🟢 SPRING CACHE: Fetching all students");
         log.info("🔄 This method executes only on cache miss");
         
-        long dbStartTime = System.currentTimeMillis();
-        List<Student> students = studentRepository.findAll();
-        long dbTime = System.currentTimeMillis() - dbStartTime;
-        
-        List<StudentDTO> studentDTOs = students.stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
-        
-        long executionTime = System.currentTimeMillis() - startTime;
-        
-        cacheStatisticsService.recordCacheMiss("SPRING", executionTime);
-        
-        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
-                .executionTime(executionTime + " ms")
-                .databaseTime(dbTime + " ms")
-                .redisTime("0 ms")
-                .cacheHit(false)
-                .cacheMiss(true)
-                .cacheType("SPRING")
-                .dataSource("MYSQL")
-                .timestamp(System.currentTimeMillis())
-                .build();
-        
-        log.info("🟢 SPRING CACHE: Fetched {} students in {}ms (Database: {}ms)", 
-                studentDTOs.size(), executionTime, dbTime);
-        
-        return ApiResponse.success(studentDTOs, metadata, "All students fetched and cached with @Cacheable");
+        try {
+            long dbStartTime = System.currentTimeMillis();
+            List<Student> students = studentRepository.findAll();
+            long dbTime = System.currentTimeMillis() - dbStartTime;
+            
+            List<StudentDTO> studentDTOs = students.stream()
+                    .map(this::mapToDTO)
+                    .collect(Collectors.toList());
+            
+            long executionTime = System.currentTimeMillis() - startTime;
+            
+            cacheStatisticsService.recordCacheMiss("SPRING", executionTime);
+            
+            ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                    .executionTime(executionTime + " ms")
+                    .databaseTime(dbTime + " ms")
+                    .redisTime("0 ms")
+                    .cacheHit(false)
+                    .cacheMiss(true)
+                    .cacheType("SPRING")
+                    .dataSource("MYSQL")
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+            
+            log.info("🟢 SPRING CACHE: Fetched {} students in {}ms (Database: {}ms)", 
+                    studentDTOs.size(), executionTime, dbTime);
+            
+            return ApiResponse.success(studentDTOs, metadata, "All students fetched and cached with @Cacheable");
+        } catch (Exception e) {
+            log.error("❌ ERROR in spring cache getAllStudents: {}", e.getMessage(), e);
+            return ApiResponse.error("Error fetching students: " + e.getMessage());
+        }
     }
 
     // ==================== @CachePut EXAMPLES ====================

@@ -4,14 +4,16 @@ import { Loader2 } from 'lucide-react';
 
 /**
  * Button Component - Reusable button component with multiple variants
+ * Mobile-first design with compact sizing
  * 
  * @param {Object} props - Component props
  * @param {string} props.variant - Button variant (primary, secondary, success, danger, warning, outline-primary, outline-secondary, outline-success, outline-danger, ghost)
- * @param {string} props.size - Button size (sm, md, lg, xl)
+ * @param {string} props.size - Button size (xs, sm, md, lg) - defaults to sm for mobile-first
  * @param {boolean} props.loading - Show loading state
  * @param {boolean} props.disabled - Disable button
  * @param {boolean} props.block - Full width button
  * @param {boolean} props.icon - Icon button
+ * @param {boolean} props.compact - Compact styling with reduced padding
  * @param {React.ReactNode} props.children - Button content
  * @param {React.ReactNode} props.leftIcon - Icon to show on left
  * @param {React.ReactNode} props.rightIcon - Icon to show on right
@@ -20,11 +22,12 @@ import { Loader2 } from 'lucide-react';
  */
 const Button = React.forwardRef(({
   variant = 'primary',
-  size = 'md',
+  size = 'sm',
   loading = false,
   disabled = false,
   block = false,
   icon = false,
+  compact = false,
   leftIcon,
   rightIcon,
   children,
@@ -47,15 +50,16 @@ const Button = React.forwardRef(({
   };
   
   const sizeStyles = {
+    xs: 'btn-xs',
     sm: 'btn-sm',
     md: 'btn-md',
     lg: 'btn-lg',
-    xl: 'btn-xl',
   };
   
   const iconStyles = icon ? 'btn-icon' : '';
   const blockStyles = block ? 'btn-block' : '';
   const loadingStyles = loading ? 'btn-loading' : '';
+  const compactStyles = compact ? 'btn-compact' : '';
   
   const classes = cn(
     baseStyles,
@@ -64,6 +68,7 @@ const Button = React.forwardRef(({
     iconStyles,
     blockStyles,
     loadingStyles,
+    compactStyles,
     className
   );
   
@@ -75,9 +80,9 @@ const Button = React.forwardRef(({
       {...rest}
     >
       {loading && <Loader2 className="absolute w-4 h-4" />}
-      {!loading && leftIcon && <span className="btn-icon-wrapper">{leftIcon}</span>}
-      {!loading && !icon && children}
-      {!loading && rightIcon && <span className="btn-icon-wrapper">{rightIcon}</span>}
+      {!loading && leftIcon && <span className="btn-icon-wrapper mr-1">{leftIcon}</span>}
+      {!loading && !icon && <span className="truncate">{children}</span>}
+      {!loading && rightIcon && <span className="btn-icon-wrapper ml-1">{rightIcon}</span>}
     </button>
   );
 });

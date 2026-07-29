@@ -1,14 +1,14 @@
-/* Buttons CSS - Button component styling */
+/* Buttons CSS - Button component styling - Mobile-first design */
 
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.4;
   border-radius: 0.375rem;
   border: 1px solid transparent;
   cursor: pointer;
@@ -27,25 +27,64 @@
   outline-offset: 2px;
 }
 
-/* Button sizes */
+/* Button sizes - Mobile-first approach */
+.btn-xs {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
 .btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.btn-md {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Compact button - reduced padding for tight spaces */
+.btn-compact {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.btn-compact.btn-sm {
+  padding: 0.3125rem 0.625rem;
+  font-size: 0.7875rem;
+}
+
+.btn-compact.btn-md {
   padding: 0.375rem 0.75rem;
   font-size: 0.8125rem;
 }
 
-.btn-md {
-  padding: 0.625rem 1.25rem;
-  font-size: 0.875rem;
-}
-
-.btn-lg {
-  padding: 0.875rem 1.75rem;
-  font-size: 1rem;
-}
-
-.btn-xl {
-  padding: 1rem 2rem;
-  font-size: 1.125rem;
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  .btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+  
+  .btn-md {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+  }
+  
+  .btn-lg {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+  }
 }
 
 /* Button variants */
@@ -178,20 +217,30 @@
   background-color: #374151;
 }
 
-/* Icon button */
+/* Icon button - Compact for mobile */
 .btn-icon {
-  padding: 0.5rem;
-  aspect-ratio: 1;
-}
-
-.btn-icon-sm {
   padding: 0.375rem;
   aspect-ratio: 1;
 }
 
-.btn-icon-lg {
-  padding: 0.75rem;
+.btn-icon-sm {
+  padding: 0.25rem;
   aspect-ratio: 1;
+}
+
+.btn-icon-lg {
+  padding: 0.5rem;
+  aspect-ratio: 1;
+}
+
+@media (max-width: 640px) {
+  .btn-icon {
+    padding: 0.3125rem;
+  }
+  
+  .btn-icon-sm {
+    padding: 0.25rem;
+  }
 }
 
 /* Loading button */

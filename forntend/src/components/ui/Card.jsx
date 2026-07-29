@@ -2,22 +2,24 @@ import React from 'react';
 import { cn } from '../../utils/cn';
 
 /**
- * Card Component - Reusable card component
+ * Card Component - Reusable card component with mobile-first design
  * 
  * @param {Object} props - Component props
- * @param {boolean} props.compact - Compact padding
+ * @param {boolean} props.compact - Compact padding (mobile-first default)
  * @param {boolean} props.bordered - Bordered variant
  * @param {boolean} props.elevated - Elevated shadow
  * @param {boolean} props.interactive - Interactive hover effect
+ * @param {boolean} props.noPadding - Remove all padding
  * @param {string} props.title - Card title
  * @param {React.ReactNode} props.children - Card content
  * @param {string} props.className - Additional classes
  */
 const Card = React.forwardRef(({
-  compact = false,
+  compact = true,
   bordered = false,
   elevated = false,
   interactive = false,
+  noPadding = false,
   title,
   children,
   className,
@@ -29,6 +31,7 @@ const Card = React.forwardRef(({
     bordered && 'card-bordered',
     elevated && 'card-elevated',
     interactive && 'card-interactive',
+    noPadding && 'card-no-padding',
     className
   );
   
@@ -43,17 +46,23 @@ const Card = React.forwardRef(({
 Card.displayName = 'Card';
 
 /**
- * CardHeader Component - Card header section
+ * CardHeader Component - Card header section with compact mobile styling
  */
-const CardHeader = ({ children, className }) => {
-  return <div className={cn('card-header', className)}>{children}</div>;
+const CardHeader = ({ children, className, compact = true }) => {
+  return <div className={cn('card-header', compact && 'card-header-compact', className)}>{children}</div>;
 };
 
 /**
- * CardTitle Component - Card title
+ * CardTitle Component - Card title with responsive sizing
  */
-const CardTitle = ({ children, className }) => {
-  return <h3 className={cn('card-title', className)}>{children}</h3>;
+const CardTitle = ({ children, className, size = 'md' }) => {
+  const sizeClasses = {
+    sm: 'text-sm',
+    md: 'text-base',
+    lg: 'text-lg',
+    xl: 'text-xl'
+  };
+  return <h3 className={cn('card-title', sizeClasses[size], className)}>{children}</h3>;
 };
 
 /**
@@ -64,17 +73,17 @@ const CardSubtitle = ({ children, className }) => {
 };
 
 /**
- * CardBody Component - Card body section
+ * CardBody Component - Card body section with compact mobile styling
  */
-const CardBody = ({ children, className }) => {
-  return <div className={cn('card-body', className)}>{children}</div>;
+const CardBody = ({ children, className, compact = true }) => {
+  return <div className={cn('card-body', compact && 'card-body-compact', className)}>{children}</div>;
 };
 
 /**
  * CardFooter Component - Card footer section
  */
-const CardFooter = ({ children, className }) => {
-  return <div className={cn('card-footer', className)}>{children}</div>;
+const CardFooter = ({ children, className, compact = true }) => {
+  return <div className={cn('card-footer', compact && 'card-footer-compact', className)}>{children}</div>;
 };
 
 export { Card, CardHeader, CardTitle, CardSubtitle, CardBody, CardFooter };

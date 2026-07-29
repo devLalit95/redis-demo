@@ -76,33 +76,41 @@ public class NoCacheService {
         
         log.info("🔴 NO CACHE: Fetching student by ID: {}", id);
         
-        // Always query database
-        Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
-        
-        long dbTime = System.currentTimeMillis() - dbStartTime;
-        long executionTime = System.currentTimeMillis() - startTime;
-        
-        // Record statistics (cache miss since no cache)
-        cacheStatisticsService.recordCacheMiss("NONE", executionTime);
-        cacheStatisticsService.recordDatabaseWrite("NONE");
-        
-        StudentDTO studentDTO = mapToDTO(student);
-        
-        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
-                .executionTime(executionTime + " ms")
-                .databaseTime(dbTime + " ms")
-                .redisTime("0 ms")
-                .cacheHit(false)
-                .cacheMiss(true)
-                .cacheType("NONE")
-                .dataSource("MYSQL")
-                .timestamp(System.currentTimeMillis())
-                .build();
-        
-        log.info("🔴 NO CACHE: Student fetched in {}ms (Database: {}ms)", executionTime, dbTime);
-        
-        return ApiResponse.success(studentDTO, metadata, "Student fetched without cache");
+        try {
+            // Always query database
+            Student student = studentRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
+            
+            long dbTime = System.currentTimeMillis() - dbStartTime;
+            long executionTime = System.currentTimeMillis() - startTime;
+            
+            // Record statistics (cache miss since no cache)
+            cacheStatisticsService.recordCacheMiss("NONE", executionTime);
+            cacheStatisticsService.recordDatabaseWrite("NONE");
+            
+            StudentDTO studentDTO = mapToDTO(student);
+            
+            ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                    .executionTime(executionTime + " ms")
+                    .databaseTime(dbTime + " ms")
+                    .redisTime("0 ms")
+                    .cacheHit(false)
+                    .cacheMiss(true)
+                    .cacheType("NONE")
+                    .dataSource("MYSQL")
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+            
+            log.info("🔴 NO CACHE: Student fetched in {}ms (Database: {}ms)", executionTime, dbTime);
+            
+            return ApiResponse.success(studentDTO, metadata, "Student fetched without cache");
+        } catch (ResourceNotFoundException e) {
+            log.error("❌ Student not found: {}", e.getMessage());
+            return ApiResponse.error("Student not found with ID: " + id);
+        } catch (Exception e) {
+            log.error("❌ ERROR in no cache getStudentById: {}", e.getMessage(), e);
+            return ApiResponse.error("Error fetching student: " + e.getMessage());
+        }
     }
 
     /**
@@ -122,34 +130,39 @@ public class NoCacheService {
         
         log.info("🔴 NO CACHE: Fetching all students");
         
-        List<Student> students = studentRepository.findAll();
-        
-        long dbTime = System.currentTimeMillis() - dbStartTime;
-        long executionTime = System.currentTimeMillis() - startTime;
-        
-        // Record statistics
-        cacheStatisticsService.recordCacheMiss("NONE", executionTime);
-        cacheStatisticsService.recordDatabaseWrite("NONE");
-        
-        List<StudentDTO> studentDTOs = students.stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
-        
-        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
-                .executionTime(executionTime + " ms")
-                .databaseTime(dbTime + " ms")
-                .redisTime("0 ms")
-                .cacheHit(false)
-                .cacheMiss(true)
-                .cacheType("NONE")
-                .dataSource("MYSQL")
-                .timestamp(System.currentTimeMillis())
-                .build();
-        
-        log.info("🔴 NO CACHE: Fetched {} students in {}ms (Database: {}ms)", 
-                studentDTOs.size(), executionTime, dbTime);
-        
-        return ApiResponse.success(studentDTOs, metadata, "All students fetched without cache");
+        try {
+            List<Student> students = studentRepository.findAll();
+            
+            long dbTime = System.currentTimeMillis() - dbStartTime;
+            long executionTime = System.currentTimeMillis() - startTime;
+            
+            // Record statistics
+            cacheStatisticsService.recordCacheMiss("NONE", executionTime);
+            cacheStatisticsService.recordDatabaseWrite("NONE");
+            
+            List<StudentDTO> studentDTOs = students.stream()
+                    .map(this::mapToDTO)
+                    .collect(Collectors.toList());
+            
+            ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                    .executionTime(executionTime + " ms")
+                    .databaseTime(dbTime + " ms")
+                    .redisTime("0 ms")
+                    .cacheHit(false)
+                    .cacheMiss(true)
+                    .cacheType("NONE")
+                    .dataSource("MYSQL")
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+            
+            log.info("🔴 NO CACHE: Fetched {} students in {}ms (Database: {}ms)", 
+                    studentDTOs.size(), executionTime, dbTime);
+            
+            return ApiResponse.success(studentDTOs, metadata, "All students fetched without cache");
+        } catch (Exception e) {
+            log.error("❌ ERROR in no cache getAllStudents: {}", e.getMessage(), e);
+            return ApiResponse.error("Error fetching students: " + e.getMessage());
+        }
     }
 
     /**

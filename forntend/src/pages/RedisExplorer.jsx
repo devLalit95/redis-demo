@@ -306,51 +306,51 @@ const RedisExplorer = () => {
   const keysList = getKeysList();
   
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
+    <div className="space-y-3">
+      {/* Page Header - Compact */}
       <div className="page-header">
-        <Heading level={1}>Redis Explorer</Heading>
-        <Text>Explore and manage your Redis data structures interactively</Text>
+        <Heading level={1} className="text-lg sm:text-xl">Redis Explorer</Heading>
+        <Text className="text-xs sm:text-sm">Explore and manage your Redis data structures</Text>
       </div>
       
-      {/* Statistics Bar */}
+      {/* Statistics Bar - Compact */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+        className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
       >
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary-100 dark:bg-primary-900/20 rounded-lg">
-            <Database className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 sm:p-2 bg-primary-100 dark:bg-primary-900/20 rounded">
+            <Database className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 dark:text-primary-400" />
           </div>
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total Keys</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">Total Keys</p>
             {dbSizeLoading ? (
-              <Loader size="sm" />
+              <Loader size="xs" />
             ) : dbSizeError ? (
-              <p className="text-lg font-semibold text-danger-600 dark:text-danger-400">Error</p>
+              <p className="text-sm font-semibold text-danger-600 dark:text-danger-400">Error</p>
             ) : (
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <p className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {dbSize?.data?.data || dbSize?.data || 0}
               </p>
             )}
           </div>
         </div>
         
-        <div className="h-8 w-px bg-gray-200 dark:bg-gray-700" />
+        <div className="h-6 sm:h-8 w-px bg-gray-200 dark:bg-gray-700 hidden sm:block" />
         
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-success-100 dark:bg-success-900/20 rounded-lg">
-            <Activity className="w-5 h-5 text-success-600 dark:text-success-400" />
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 sm:p-2 bg-success-100 dark:bg-success-900/20 rounded">
+            <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-success-600 dark:text-success-400" />
           </div>
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Memory Used</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">Memory Used</p>
             {redisInfoLoading ? (
-              <Loader size="sm" />
+              <Loader size="xs" />
             ) : redisInfoError ? (
-              <p className="text-lg font-semibold text-danger-600 dark:text-danger-400">Error</p>
+              <p className="text-sm font-semibold text-danger-600 dark:text-danger-400">Error</p>
             ) : (
-              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <p className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {redisInfo?.data?.data?.used_memory_human || redisInfo?.data?.used_memory_human || 'N/A'}
               </p>
             )}
@@ -361,35 +361,36 @@ const RedisExplorer = () => {
         
         <Button
           variant="outline-primary"
+          size="sm"
           onClick={() => {
             refetchKeys();
             toast.success('Keys refreshed');
           }}
-          leftIcon={<RefreshCw className="w-4 h-4" />}
+          compact
         >
           Refresh
         </Button>
       </motion.div>
       
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Main Content - Responsive Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         {/* Sidebar - Data Types */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Data Types</CardTitle>
+        <Card compact>
+          <CardHeader compact>
+            <CardTitle size="sm">Data Types</CardTitle>
           </CardHeader>
-          <CardBody>
-            <div className="space-y-2">
+          <CardBody compact>
+            <div className="space-y-1">
               <button
                 onClick={() => setSelectedType('all')}
                 className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  'w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium transition-colors',
                   selectedType === 'all'
                     ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
                     : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
                 )}
               >
-                <Layers className="w-5 h-5" />
+                <Layers className="w-4 h-4" />
                 All Types ({Array.isArray(keysList) ? keysList.length : 0})
               </button>
               
@@ -400,13 +401,13 @@ const RedisExplorer = () => {
                     key={type.id}
                     onClick={() => setSelectedType(type.id)}
                     className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                      'w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium transition-colors',
                       selectedType === type.id
                         ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
                         : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
                     )}
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-4 h-4" />
                     {type.name}
                   </button>
                 );
@@ -416,105 +417,107 @@ const RedisExplorer = () => {
         </Card>
         
         {/* Main Content Area */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Search and Actions */}
-          <div className="flex items-center gap-4">
+        <div className="lg:col-span-3 space-y-3">
+          {/* Search and Actions - Compact */}
+          <div className="flex items-center gap-2">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <Input
                 placeholder="Search keys..."
                 value={searchQuery}
                 onChange={handleSearch}
-                className="pl-10"
+                className="pl-8 text-xs"
+                compact
               />
             </div>
             <Button
               variant="primary"
+              size="sm"
               onClick={() => handleAddKey('string')}
-              leftIcon={<Plus className="w-4 h-4" />}
+              compact
             >
               Add Key
             </Button>
           </div>
           
-          {/* Keys List */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Keys ({Array.isArray(keysList) ? keysList.length : 0})</CardTitle>
+          {/* Keys List - Compact */}
+          <Card compact>
+            <CardHeader compact>
+              <CardTitle size="sm">Keys ({Array.isArray(keysList) ? keysList.length : 0})</CardTitle>
             </CardHeader>
-            <CardBody>
+            <CardBody compact>
               {keysLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader size="md" text="Loading keys..." />
+                <div className="flex items-center justify-center py-6">
+                  <Loader size="sm" text="Loading keys..." />
                 </div>
               ) : keysError ? (
-                <div className="text-center py-8">
-                  <Database className="w-16 h-16 text-danger-300 dark:text-danger-600 mx-auto mb-4" />
-                  <Heading level={3} className="text-gray-900 dark:text-gray-100 mb-2">
+                <div className="text-center py-6">
+                  <Database className="w-12 h-12 text-danger-300 dark:text-danger-600 mx-auto mb-3" />
+                  <Heading level={3} className="text-gray-900 dark:text-gray-100 mb-2 text-sm">
                     Error Loading Keys
                   </Heading>
-                  <Text className="text-gray-500 dark:text-gray-400 mb-4">
+                  <Text className="text-gray-500 dark:text-gray-400 mb-3 text-xs">
                     {keysError.userMessage || 'Failed to load Redis keys'}
                   </Text>
                   <Button
                     variant="primary"
+                    size="sm"
                     onClick={() => refetchKeys()}
-                    leftIcon={<RefreshCw className="w-4 h-4" />}
+                    compact
                   >
                     Retry
                   </Button>
                 </div>
               ) : !Array.isArray(keysList) || keysList.length === 0 ? (
-                <div className="text-center py-12">
-                  <Database className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                  <Heading level={3} className="text-gray-900 dark:text-gray-100 mb-2">
+                <div className="text-center py-8">
+                  <Database className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <Heading level={3} className="text-gray-900 dark:text-gray-100 mb-2 text-sm">
                     No Keys Found
                   </Heading>
-                  <Text className="text-gray-500 dark:text-gray-400 mb-6">
+                  <Text className="text-gray-500 dark:text-gray-400 mb-4 text-xs">
                     {searchQuery ? 'Try a different search pattern' : 'Add your first key to get started'}
                   </Text>
                   {!searchQuery && (
                     <Button
                       variant="primary"
+                      size="sm"
                       onClick={() => handleAddKey('string')}
-                      leftIcon={<Plus className="w-4 h-4" />}
+                      compact
                     >
                       Add Your First Key
                     </Button>
                   )}
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {keysList.map((key, index) => (
                     <motion.div
                       key={key || index}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-900 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                        <div className="flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                          <span className="font-medium text-gray-900 dark:text-gray-100 text-xs truncate">
                             {key}
                           </span>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="xs"
                           onClick={() => handleViewKey(key)}
-                          leftIcon={<Eye className="w-4 h-4" />}
                         >
                           View
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="xs"
                           onClick={() => handleDeleteKey(key)}
-                          leftIcon={<Trash2 className="w-4 h-4 text-danger-500" />}
                         >
                           Delete
                         </Button>
@@ -528,14 +531,15 @@ const RedisExplorer = () => {
         </div>
       </div>
       
-      {/* Add Key Modal */}
+      {/* Add Key Modal - Compact */}
       <Modal
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         title="Add New Key"
         size="md"
+        compact
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           <form onSubmit={handleAddStringKey}>
             <Input
               label="Key Name"
@@ -543,6 +547,7 @@ const RedisExplorer = () => {
               value={newKeyName}
               onChange={(e) => setNewKeyName(e.target.value)}
               required
+              compact
             />
             <Input
               label="Value"
@@ -550,12 +555,15 @@ const RedisExplorer = () => {
               value={newKeyValue}
               onChange={(e) => setNewKeyValue(e.target.value)}
               required
+              compact
             />
-            <div className="flex justify-end gap-3 pt-4">
+            <div className="flex justify-end gap-2 pt-2">
               <Button
                 variant="ghost"
                 onClick={() => setAddModalOpen(false)}
                 type="button"
+                size="sm"
+                compact
               >
                 Cancel
               </Button>
@@ -563,6 +571,8 @@ const RedisExplorer = () => {
                 variant="primary"
                 type="submit"
                 loading={stringMutation.isPending}
+                size="sm"
+                compact
               >
                 Add Key
               </Button>
@@ -571,14 +581,15 @@ const RedisExplorer = () => {
         </div>
       </Modal>
       
-      {/* View Key Modal */}
+      {/* View Key Modal - Compact */}
       <Modal
         isOpen={viewModalOpen}
         onClose={() => setViewModalOpen(false)}
         title={`Key: ${selectedKey}`}
-        size="lg"
+        size="md"
+        compact
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           {keyValue ? (
             <>
               <div className="flex items-center gap-2">
@@ -586,27 +597,29 @@ const RedisExplorer = () => {
                   {keyValue?.data?.data ? 'Data' : 'Empty'}
                 </Badge>
                 {keyValue?.data?.metadata?.executionTime && (
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
                     <Clock className="w-3 h-3 inline mr-1" />
                     {keyValue.data.metadata.executionTime}
                   </span>
                 )}
               </div>
-              <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-                <pre className="text-sm text-gray-900 dark:text-gray-100 overflow-x-auto">
+              <div className="bg-gray-50 dark:bg-gray-900 p-2 rounded">
+                <pre className="text-xs text-gray-900 dark:text-gray-100 overflow-x-auto">
                   {JSON.stringify(keyValue?.data?.data, null, 2)}
                 </pre>
               </div>
             </>
           ) : (
-            <div className="text-center py-8">
-              <Loader size="md" text="Loading key value..." />
+            <div className="text-center py-6">
+              <Loader size="sm" text="Loading key value..." />
             </div>
           )}
-          <div className="flex justify-end pt-4">
+          <div className="flex justify-end pt-2">
             <Button
               variant="primary"
               onClick={() => setViewModalOpen(false)}
+              size="sm"
+              compact
             >
               Close
             </Button>

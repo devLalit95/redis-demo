@@ -8,7 +8,7 @@ import Modal from '../components/ui/Modal';
 import Typography from '../components/ui/Typography';
 import Loader from '../components/ui/Loader';
 import { toast } from 'react-hot-toast';
-import { Clock, Database, Zap, BarChart3 } from 'lucide-react';
+import { Clock, Database, Zap } from 'lucide-react';
 
 // Use the proxy configuration for development
 const API_BASE = '/api';
@@ -39,7 +39,8 @@ const StudentCRUD = () => {
     noCache: null,
     manualCache: null,
     springCache: null,
-    comparison: null
+    comparison: null,
+    lastUpdated: null
   });
   const [isLoadingTimings, setIsLoadingTimings] = useState(false);
   const [studentTimings, setStudentTimings] = useState({});
@@ -50,52 +51,84 @@ const StudentCRUD = () => {
   const compareCachePerformance = async () => {
     setIsLoadingTimings(true);
     try {
-      const startTime = Date.now();
+      console.log('Starting performance comparison...');
       
-      // Fetch without cache
+      // Measure SQL Database time
+      const sqlStart = Date.now();
       const noCacheResponse = await axios.get(`${API_BASE}/cache-playground/no-cache/all`);
-      const noCacheTime = noCacheResponse.data?.metadata?.executionTime || '0 ms';
+      const sqlTime = Date.now() - sqlStart;
+      console.log('No cache response:', noCacheResponse.data);
       
-      // Fetch with manual cache
+      // Measure Redis Cache time
+      const redisStart = Date.now();
       const manualCacheResponse = await axios.get(`${API_BASE}/cache-playground/manual-cache/all`);
-      const manualCacheTime = manualCacheResponse.data?.metadata?.executionTime || '0 ms';
+      const redisTime = Date.now() - redisStart;
+      console.log('Manual cache response:', manualCacheResponse.data);
       
-      // Fetch with Spring cache
-      const springCacheResponse = await axios.get(`${API_BASE}/cache-playground/spring-cache/all`);
-      const springCacheTime = springCacheResponse.data?.metadata?.executionTime || '0 ms';
+      // Try to get backend execution time if available
+      let noCacheTime = `${sqlTime} ms`;
+      let manualCacheTime = `${redisTime} ms`;
       
-      const endTime = Date.now();
+      if (noCacheResponse.data?.metadata?.executionTime) {
+        noCacheTime = noCacheResponse.data.metadata.executionTime;
+      }
+      
+      if (manualCacheResponse.data?.metadata?.executionTime) {
+        manualCacheTime = manualCacheResponse.data.metadata.executionTime;
+      }
       
       // Parse times for comparison
       const parseTime = (timeStr) => {
+        if (!timeStr) return 0;
         const match = timeStr.match(/(\d+)/);
         return match ? parseInt(match[1]) : 0;
       };
       
       const noCacheMs = parseTime(noCacheTime);
       const manualCacheMs = parseTime(manualCacheTime);
-      const springCacheMs = parseTime(springCacheTime);
+      
+      console.log('Parsed times - SQL:', noCacheMs, 'ms, Redis:', manualCacheMs, 'ms');
       
       // Calculate speed improvements
       const manualSpeedup = noCacheMs > 0 ? ((noCacheMs - manualCacheMs) / noCacheMs * 100).toFixed(1) : 0;
-      const springSpeedup = noCacheMs > 0 ? ((noCacheMs - springCacheMs) / noCacheMs * 100).toFixed(1) : 0;
       
-      setTimingData({
+      // Calculate time difference
+      const manualDiff = noCacheMs - manualCacheMs;
+      
+      const comparisonData = {
         noCache: noCacheTime,
         manualCache: manualCacheTime,
-        springCache: springCacheTime,
         comparison: {
           manualSpeedup,
-          springSpeedup,
-          fastest: manualCacheMs < springCacheMs ? 'Manual Cache' : 'Spring Cache',
-          fastestTime: Math.min(manualCacheMs, springCacheMs)
-        }
-      });
+          fastest: manualCacheMs < noCacheMs ? 'Redis Cache' : 'SQL Database',
+          fastestTime: Math.min(manualCacheMs, noCacheMs),
+          manualDiff: `${manualDiff}ms`
+        },
+        lastUpdated: new Date().toLocaleTimeString()
+      };
       
-      toast.success('Performance comparison completed');
+      console.log('Setting timing data:', comparisonData);
+      setTimingData(comparisonData);
+      
+      toast.success(`Performance comparison completed: Redis is ${manualSpeedup}% faster`);
     } catch (error) {
       console.error('Error comparing performance:', error);
-      toast.error('Failed to compare performance');
+      console.error('Error details:', error.response?.data || error.message);
+      
+      // Set default values on error to show something happened
+      setTimingData({
+        noCache: 'Error',
+        manualCache: 'Error',
+        comparison: {
+          manualSpeedup: 0,
+          fastest: 'Unknown',
+          fastestTime: 0,
+          manualDiff: '0ms'
+        },
+        lastUpdated: new Date().toLocaleTimeString()
+      });
+      
+      toast.error('Failed to compare performance: ' + (error.response?.data?.message || error.message));
     } finally {
       setIsLoadingTimings(false);
     }
@@ -121,59 +154,73 @@ const StudentCRUD = () => {
     try {
       setStudentTimings(prev => ({ ...prev, [studentId]: { loading: true } }));
       
-      const startTime = Date.now();
+      console.log('Testing student:', studentId);
       
-      // Fetch without cache
+      // Measure SQL Database time
+      const sqlStart = Date.now();
       const noCacheResponse = await axios.get(`${API_BASE}/cache-playground/no-cache/${studentId}`);
-      const noCacheTime = noCacheResponse.data?.metadata?.executionTime || '0 ms';
+      const sqlTime = Date.now() - sqlStart;
+      console.log('No cache response for student:', noCacheResponse.data);
       
-      // Fetch with manual cache
+      // Measure Redis Cache time
+      const redisStart = Date.now();
       const manualCacheResponse = await axios.get(`${API_BASE}/cache-playground/manual-cache/${studentId}`);
-      const manualCacheTime = manualCacheResponse.data?.metadata?.executionTime || '0 ms';
+      const redisTime = Date.now() - redisStart;
+      console.log('Manual cache response for student:', manualCacheResponse.data);
       
-      // Fetch with Spring cache
-      const springCacheResponse = await axios.get(`${API_BASE}/cache-playground/spring-cache/${studentId}`);
-      const springCacheTime = springCacheResponse.data?.metadata?.executionTime || '0 ms';
+      // Try to get backend execution time if available
+      let noCacheTime = `${sqlTime} ms`;
+      let manualCacheTime = `${redisTime} ms`;
       
-      const endTime = Date.now();
+      if (noCacheResponse.data?.metadata?.executionTime) {
+        noCacheTime = noCacheResponse.data.metadata.executionTime;
+      }
+      
+      if (manualCacheResponse.data?.metadata?.executionTime) {
+        manualCacheTime = manualCacheResponse.data.metadata.executionTime;
+      }
       
       // Parse times for comparison
       const parseTime = (timeStr) => {
+        if (!timeStr) return 0;
         const match = timeStr.match(/(\d+)/);
         return match ? parseInt(match[1]) : 0;
       };
       
       const noCacheMs = parseTime(noCacheTime);
       const manualCacheMs = parseTime(manualCacheTime);
-      const springCacheMs = parseTime(springCacheTime);
       
-      // Calculate speed improvements
-      const manualSpeedup = noCacheMs > 0 ? ((noCacheMs - manualCacheMs) / noCacheMs * 100).toFixed(1) : 0;
-      const springSpeedup = noCacheMs > 0 ? ((noCacheMs - springCacheMs) / noCacheMs * 100).toFixed(1) : 0;
+      console.log('Student parsed times - SQL:', noCacheMs, 'ms, Redis:', manualCacheMs, 'ms');
       
+      // Calculate speed improvement
+      const speedup = noCacheMs > 0 ? ((noCacheMs - manualCacheMs) / noCacheMs * 100).toFixed(1) : 0;
+      const timeDiff = noCacheMs - manualCacheMs;
+      
+      const studentTimingData = {
+        loading: false,
+        sqlTime: noCacheTime,
+        redisTime: manualCacheTime,
+        speedup,
+        timeDiff: `${timeDiff}ms`,
+        lastUpdated: new Date().toLocaleTimeString()
+      };
+      
+      console.log('Setting student timing data:', studentTimingData);
       setStudentTimings({
-        [studentId]: {
-          loading: false,
-          noCache: noCacheTime,
-          manualCache: manualCacheTime,
-          springCache: springCacheTime,
-          comparison: {
-            manualSpeedup,
-            springSpeedup,
-            fastest: manualCacheMs < springCacheMs ? 'Manual Cache' : 'Spring Cache',
-            fastestTime: Math.min(manualCacheMs, springCacheMs)
-          }
-        }
+        [studentId]: studentTimingData
       });
       
-      toast.success(`Performance comparison for student ${studentId} completed`);
+      toast.success(`SQL vs Redis comparison for student ${studentId}: Redis is ${speedup}% faster`);
     } catch (error) {
       console.error('Error fetching student timing:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      
       setStudentTimings(prev => ({ 
         ...prev, 
-        [studentId]: { loading: false, error: true } 
+        [studentId]: { loading: false, error: true, sqlTime: 'Error', redisTime: 'Error' } 
       }));
-      toast.error('Failed to compare performance for this student');
+      
+      toast.error('Failed to compare performance: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -315,205 +362,240 @@ const StudentCRUD = () => {
   if (error) return <Typography variant="h3">Error loading students</Typography>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <Typography variant="h2">Student Management</Typography>
-        <div className="flex gap-3">
-          <Button 
-            variant="secondary" 
-            onClick={compareCachePerformance}
-            disabled={isLoadingTimings}
-            leftIcon={<BarChart3 className="w-4 h-4" />}
-          >
-            {isLoadingTimings ? 'Comparing...' : 'Compare Performance'}
-          </Button>
-          <Button onClick={openModal}>Add Student</Button>
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <Typography variant="h2" className="text-lg sm:text-xl">Student Management</Typography>
+        <Button 
+          onClick={openModal}
+          compact
+          className="w-full sm:w-auto"
+        >
+          Add Student
+        </Button>
       </div>
 
-      {/* Performance Comparison Card */}
-      {timingData.comparison && (
-        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-800">
-          <CardBody>
-            <div className="flex items-center gap-2 mb-4">
-              <Zap className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-              <Typography variant="h4" className="text-blue-900 dark:text-blue-100">
-                Performance Comparison
+      {/* SQL vs Redis Performance Comparison Card */}
+      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-800">
+        <CardBody compact>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+              <Typography variant="h4" className="text-sm text-blue-900 dark:text-blue-100">
+                SQL vs Redis Performance
               </Typography>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              {/* No Cache */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <Database className="w-4 h-4 text-red-500" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">No Cache</span>
+            <Button
+              variant="primary"
+              size="xs"
+              onClick={compareCachePerformance}
+              disabled={isLoadingTimings}
+              compact
+            >
+              {isLoadingTimings ? 'Testing...' : 'Refresh'}
+            </Button>
+          </div>
+          
+          {timingData.comparison && timingData.noCache !== 'Error' ? (
+            <>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {/* SQL Database Time */}
+                <div className="bg-white dark:bg-gray-800 rounded p-2 border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Database className="w-3 h-3 text-red-500" />
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">SQL Database</span>
+                  </div>
+                  <div className="text-lg font-bold text-red-600 dark:text-red-400">
+                    {timingData.noCache}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Direct database access
+                  </div>
                 </div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {timingData.noCache}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Direct database access
+                
+                {/* Redis Cache Time */}
+                <div className="bg-white dark:bg-gray-800 rounded p-2 border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Zap className="w-3 h-3 text-green-500" />
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Redis Cache</span>
+                  </div>
+                  <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                    {timingData.manualCache}
+                  </div>
+                  <div className="text-xs text-green-600 dark:text-green-400 font-medium">
+                    {timingData.comparison.manualSpeedup}% faster
+                  </div>
                 </div>
               </div>
               
-              {/* Manual Cache */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="w-4 h-4 text-green-500" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Manual Cache</span>
+              {/* Time Difference Summary */}
+              <div className="bg-white dark:bg-gray-800 rounded p-2 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Time Difference</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Updated: {timingData.lastUpdated}
+                  </span>
                 </div>
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {timingData.manualCache}
-                </div>
-                <div className="text-xs text-green-600 dark:text-green-400 mt-1 font-medium">
-                  {timingData.comparison.manualSpeedup}% faster
-                </div>
-              </div>
-              
-              {/* Spring Cache */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Spring Cache</span>
-                </div>
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {timingData.springCache}
-                </div>
-                <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
-                  {timingData.comparison.springSpeedup}% faster
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                    {timingData.comparison.manualDiff}
+                  </span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    Redis is {timingData.comparison.manualSpeedup}% faster than SQL
+                  </span>
                 </div>
               </div>
+            </>
+          ) : timingData.comparison && timingData.noCache === 'Error' ? (
+            <div className="text-center py-4">
+              <p className="text-xs text-red-600 dark:text-red-400 mb-2">
+                Error fetching performance data
+              </p>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={compareCachePerformance}
+                disabled={isLoadingTimings}
+                compact
+              >
+                Retry
+              </Button>
             </div>
-            
-            {/* Summary */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-medium">Fastest:</span> {timingData.comparison.fastest}
-                </span>
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-medium">Speedup:</span> Up to {Math.max(timingData.comparison.manualSpeedup, timingData.comparison.springSpeedup)}%
-                </span>
-              </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                Click "Refresh" to compare SQL vs Redis performance
+              </p>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={compareCachePerformance}
+                disabled={isLoadingTimings}
+                compact
+              >
+                {isLoadingTimings ? 'Testing...' : 'Start Comparison'}
+              </Button>
             </div>
-          </CardBody>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Student List</CardTitle>
-        </CardHeader>
-        <CardBody>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-3">Roll No</th>
-                <th className="text-left p-3">Name</th>
-                <th className="text-left p-3">Email</th>
-                <th className="text-left p-3">Course</th>
-                <th className="text-left p-3">Branch</th>
-                <th className="text-left p-3">Semester</th>
-                <th className="text-left p-3">CGPA</th>
-                <th className="text-left p-3">Status</th>
-                <th className="text-left p-3">Performance</th>
-                <th className="text-left p-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students?.map((student) => {
-                const timing = studentTimings[student.id];
-                return (
-                  <tr key={student.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{student.rollNumber}</td>
-                    <td className="p-3">{student.name}</td>
-                    <td className="p-3">{student.email}</td>
-                    <td className="p-3">{student.course}</td>
-                    <td className="p-3">{student.branch}</td>
-                    <td className="p-3">{student.semester}</td>
-                    <td className="p-3">{student.cgpa}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded ${
-                        student.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {student.status}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      {timing?.loading ? (
-                        <div className="flex items-center gap-2">
-                          <Loader size="sm" />
-                          <span className="text-xs text-gray-500">Testing...</span>
-                        </div>
-                      ) : timing?.comparison ? (
-                        <div className="text-xs">
-                          <div className="flex items-center gap-1 mb-1">
-                            <Clock className="w-3 h-3 text-red-500" />
-                            <span className="text-gray-600">{timing.noCache}</span>
-                          </div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <Zap className="w-3 h-3 text-green-500" />
-                            <span className="text-green-600 font-medium">{timing.manualCache}</span>
-                            <span className="text-green-600">({timing.comparison.manualSpeedup}% faster)</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Database className="w-3 h-3 text-blue-500" />
-                            <span className="text-blue-600 font-medium">{timing.springCache}</span>
-                            <span className="text-blue-600">({timing.comparison.springSpeedup}% faster)</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => fetchStudentWithTiming(student.id)}
-                        >
-                          Test
-                        </Button>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleEdit(student)}
-                        className="mr-2"
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() => handleDelete(student.id)}
-                      >
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+          )}
         </CardBody>
       </Card>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} size="lg">
-        <CardHeader>
-          <CardTitle>{editingStudent ? 'Edit Student' : 'Add Student'}</CardTitle>
+      <Card compact>
+        <CardHeader compact>
+          <CardTitle size="sm">Student List</CardTitle>
         </CardHeader>
-        <CardBody>
-        <form onSubmit={handleSubmit} className="space-y-4 pb-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardBody compact>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2 text-xs">Roll No</th>
+                  <th className="text-left p-2 text-xs">Name</th>
+                  <th className="text-left p-2 text-xs hidden sm:table-cell">Email</th>
+                  <th className="text-left p-2 text-xs hidden md:table-cell">Course</th>
+                  <th className="text-left p-2 text-xs hidden lg:table-cell">Branch</th>
+                  <th className="text-left p-2 text-xs hidden md:table-cell">Sem</th>
+                  <th className="text-left p-2 text-xs hidden lg:table-cell">CGPA</th>
+                  <th className="text-left p-2 text-xs hidden sm:table-cell">Status</th>
+                  <th className="text-left p-2 text-xs">Performance</th>
+                  <th className="text-left p-2 text-xs">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students?.map((student) => {
+                  const timing = studentTimings[student.id];
+                  return (
+                    <tr key={student.id} className="border-b hover:bg-gray-50">
+                      <td className="p-2 text-xs">{student.rollNumber}</td>
+                      <td className="p-2 text-xs font-medium">{student.name}</td>
+                      <td className="p-2 text-xs hidden sm:table-cell">{student.email}</td>
+                      <td className="p-2 text-xs hidden md:table-cell">{student.course}</td>
+                      <td className="p-2 text-xs hidden lg:table-cell">{student.branch}</td>
+                      <td className="p-2 text-xs hidden md:table-cell">{student.semester}</td>
+                      <td className="p-2 text-xs hidden lg:table-cell">{student.cgpa}</td>
+                      <td className="p-2 text-xs hidden sm:table-cell">
+                        <span className={`px-1.5 py-0.5 rounded text-xs ${
+                          student.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {student.status}
+                        </span>
+                      </td>
+                      <td className="p-2 text-xs">
+                        {timing?.loading ? (
+                          <div className="flex items-center gap-1">
+                            <Loader size="xs" />
+                            <span className="text-xs text-gray-500">Testing...</span>
+                          </div>
+                        ) : timing?.error ? (
+                          <div className="text-xs text-red-600">
+                            Error
+                          </div>
+                        ) : timing?.sqlTime ? (
+                          <div className="text-xs">
+                            <div className="flex items-center gap-0.5 mb-0.5">
+                              <Database className="w-2.5 h-2.5 text-red-500" />
+                              <span className="text-gray-600">SQL: {timing.sqlTime}</span>
+                            </div>
+                            <div className="flex items-center gap-0.5 mb-0.5">
+                              <Zap className="w-2.5 h-2.5 text-green-500" />
+                              <span className="text-green-600">Redis: {timing.redisTime}</span>
+                            </div>
+                            <div className="flex items-center gap-0.5">
+                              <span className="text-green-600 font-medium">{timing.speedup}% faster</span>
+                              <span className="text-gray-400">({timing.timeDiff})</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <Button
+                            size="xs"
+                            variant="secondary"
+                            onClick={() => fetchStudentWithTiming(student.id)}
+                          >
+                            Test
+                          </Button>
+                        )}
+                      </td>
+                      <td className="p-2 text-xs">
+                        <div className="flex gap-1">
+                          <Button
+                            size="xs"
+                            variant="secondary"
+                            onClick={() => handleEdit(student)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="danger"
+                            onClick={() => handleDelete(student.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} size="lg" compact>
+        <CardHeader compact>
+          <CardTitle size="sm">{editingStudent ? 'Edit Student' : 'Add Student'}</CardTitle>
+        </CardHeader>
+        <CardBody compact>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Roll Number"
               name="rollNumber"
               value={formData.rollNumber}
               onChange={handleInputChange}
               required
-              placeholder="Enter roll number"
+              placeholder="Roll number"
+              compact
             />
             <Input
               label="Name"
@@ -521,11 +603,12 @@ const StudentCRUD = () => {
               value={formData.name}
               onChange={handleInputChange}
               required
-              placeholder="Enter full name"
+              placeholder="Full name"
+              compact
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Email"
               name="email"
@@ -534,6 +617,7 @@ const StudentCRUD = () => {
               onChange={handleInputChange}
               required
               placeholder="student@example.com"
+              compact
             />
             <Input
               label="Phone"
@@ -541,18 +625,20 @@ const StudentCRUD = () => {
               value={formData.phone}
               onChange={handleInputChange}
               required
-              placeholder="Enter phone number"
+              placeholder="Phone number"
+              compact
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Course"
               name="course"
               value={formData.course}
               onChange={handleInputChange}
               required
-              placeholder="e.g., B.Tech, B.Sc"
+              placeholder="B.Tech, B.Sc"
+              compact
             />
             <Input
               label="Branch"
@@ -560,11 +646,12 @@ const StudentCRUD = () => {
               value={formData.branch}
               onChange={handleInputChange}
               required
-              placeholder="e.g., CSE, ECE, ME"
+              placeholder="CSE, ECE, ME"
+              compact
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Semester"
               name="semester"
@@ -575,6 +662,7 @@ const StudentCRUD = () => {
               onChange={handleInputChange}
               required
               placeholder="1-8"
+              compact
             />
             <Input
               label="CGPA"
@@ -587,32 +675,36 @@ const StudentCRUD = () => {
               onChange={handleInputChange}
               required
               placeholder="0.00-10.00"
+              compact
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="City"
               name="city"
               value={formData.city}
               onChange={handleInputChange}
               required
-              placeholder="Enter city"
+              placeholder="City"
+              compact
             />
             <Input
               label="Address"
               name="address"
               value={formData.address}
               onChange={handleInputChange}
-              placeholder="Enter address (optional)"
+              placeholder="Address (optional)"
+              compact
             />
           </div>
           
-          <div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800 pb-0">
+          <div className="flex items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
             <Button 
               type="submit" 
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="flex-1 md:flex-none"
+              className="flex-1 sm:flex-none"
+              compact
             >
               {createMutation.isPending || updateMutation.isPending ? 'Saving...' : (editingStudent ? 'Update' : 'Create')}
             </Button>
@@ -620,7 +712,8 @@ const StudentCRUD = () => {
               type="button"
               variant="secondary"
               onClick={() => setIsModalOpen(false)}
-              className="flex-1 md:flex-none"
+              className="flex-1 sm:flex-none"
+              compact
             >
               Cancel
             </Button>

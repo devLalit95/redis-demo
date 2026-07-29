@@ -3,16 +3,17 @@ import { cn } from '../../utils/cn';
 import { X } from 'lucide-react';
 
 /**
- * Modal Component - Reusable modal component
+ * Modal Component - Mobile-first responsive modal
  * 
  * @param {Object} props - Component props
  * @param {boolean} props.isOpen - Modal open state
  * @param {Function} props.onClose - Modal close function
  * @param {string} props.title - Modal title
- * @param {string} props.size - Modal size (sm, md, lg, xl, full)
+ * @param {string} props.size - Modal size (sm, md, lg, xl, full) - responsive sizing
  * @param {boolean} props.closeOnOverlay - Close on overlay click
  * @param {boolean} props.closeOnEscape - Close on escape key
  * @param {boolean} props.showCloseButton - Show close button
+ * @param {boolean} props.compact - Compact padding for mobile
  * @param {React.ReactNode} props.children - Modal content
  * @param {string} props.className - Additional classes
  */
@@ -24,6 +25,7 @@ const Modal = ({
   closeOnOverlay = true,
   closeOnEscape = true,
   showCloseButton = true,
+  compact = true,
   children,
   className,
 }) => {
@@ -53,12 +55,14 @@ const Modal = ({
   if (!isOpen) return null;
   
   const sizeStyles = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
-    full: 'max-w-full m-4',
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    full: 'max-w-full m-2',
   };
+  
+  const paddingStyles = compact ? 'p-3' : 'p-4';
   
   const handleOverlayClick = (e) => {
     if (closeOnOverlay && e.target === e.currentTarget) {
@@ -68,20 +72,20 @@ const Modal = ({
   
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/50 animate-fade-in"
       onClick={handleOverlayClick}
     >
       <div
         className={cn(
-          'bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full animate-scale-in flex flex-col max-h-[90vh]',
+          'bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full animate-scale-in flex flex-col max-h-[95vh] sm:max-h-[90vh]',
           sizeStyles[size],
           className
         )}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className={cn('flex items-center justify-between border-b border-gray-200 dark:border-gray-700 flex-shrink-0', compact ? 'p-3' : 'p-4')}>
             {title && (
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className={cn('font-semibold text-gray-900 dark:text-gray-100', compact ? 'text-base' : 'text-lg')}>
                 {title}
               </h2>
             )}
@@ -90,12 +94,12 @@ const Modal = ({
                 onClick={onClose}
                 className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
-                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                <X className={cn('text-gray-500 dark:text-gray-400', compact ? 'w-4 h-4' : 'w-5 h-5')} />
               </button>
             )}
           </div>
         )}
-        <div className="p-4 overflow-y-auto flex-1">{children}</div>
+        <div className={cn('overflow-y-auto flex-1', paddingStyles)}>{children}</div>
       </div>
     </div>
   );

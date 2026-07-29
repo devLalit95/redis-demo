@@ -139,21 +139,21 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="space-y-4">
-      {/* Page Header */}
+    <div className="space-y-3">
+      {/* Page Header - Compact */}
       <div className="page-header">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
           Monitor your Redis instance and system performance
         </p>
       </div>
 
-      {/* Metric Cards */}
+      {/* Metric Cards - Responsive Grid */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-2"
       >
         {metricCards.map((card, index) => {
           const Icon = card.icon;
@@ -171,18 +171,18 @@ const Dashboard = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: index * 0.06 }}
             >
-              <Card interactive className="p-0">
-                <CardBody className="p-3">
-                  <div className="flex items-start justify-between gap-2">
+              <Card interactive className="p-0" compact>
+                <CardBody className="p-2">
+                  <div className="flex items-start justify-between gap-1.5">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
                         {card.title}
                       </p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                      <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight">
                         {card.value}
                       </p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <TrendingUp className="w-3 h-3 text-success-500 shrink-0" />
+                      <div className="flex items-center gap-0.5 mt-0.5">
+                        <TrendingUp className="w-2.5 h-2.5 text-success-500 shrink-0" />
                         <span className="text-xs text-success-600 dark:text-success-400">
                           {card.change}
                         </span>
@@ -191,8 +191,8 @@ const Dashboard = () => {
                         </span>
                       </div>
                     </div>
-                    <div className={cn('p-2 rounded-md shrink-0', colorClasses[card.color])}>
-                      <Icon className="w-4 h-4" />
+                    <div className={cn('p-1.5 rounded-md shrink-0', colorClasses[card.color])}>
+                      <Icon className="w-3.5 h-3.5" />
                     </div>
                   </div>
                 </CardBody>
@@ -202,19 +202,19 @@ const Dashboard = () => {
         })}
       </motion.div>
 
-      {/* System Status */}
+      {/* System Status - Responsive Grid */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, delay: 0.2 }}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-3"
+        className="grid grid-cols-1 lg:grid-cols-2 gap-2"
       >
-        <Card>
-          <CardHeader className="py-2.5 px-3">
-            <CardTitle className="text-sm">System Health</CardTitle>
+        <Card compact>
+          <CardHeader compact>
+            <CardTitle size="sm">System Health</CardTitle>
           </CardHeader>
-          <CardBody className="p-3 pt-0">
-            <div className="space-y-2">
+          <CardBody compact>
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500 dark:text-gray-400">Redis Status</span>
                 <Badge variant={health?.data?.redis?.status === 'up' ? 'success' : 'danger'} size="sm">
@@ -243,22 +243,22 @@ const Dashboard = () => {
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader className="py-2.5 px-3">
-            <CardTitle className="text-sm">Quick Actions</CardTitle>
+        <Card compact>
+          <CardHeader compact>
+            <CardTitle size="sm">Quick Actions</CardTitle>
           </CardHeader>
-          <CardBody className="p-3 pt-0">
-            <div className="space-y-2">
-              <Button variant="primary" size="sm" block className="justify-start">
-                <Database className="w-3.5 h-3.5 mr-2" />
+          <CardBody compact>
+            <div className="space-y-1.5">
+              <Button variant="primary" size="sm" block className="justify-start" compact>
+                <Database className="w-3 h-3 mr-1.5" />
                 Explore Redis Data
               </Button>
-              <Button variant="secondary" size="sm" block className="justify-start">
-                <Activity className="w-3.5 h-3.5 mr-2" />
+              <Button variant="secondary" size="sm" block className="justify-start" compact>
+                <Activity className="w-3 h-3 mr-1.5" />
                 View Performance Metrics
               </Button>
-              <Button variant="outline-primary" size="sm" block className="justify-start">
-                <Clock className="w-3.5 h-3.5 mr-2" />
+              <Button variant="outline-primary" size="sm" block className="justify-start" compact>
+                <Clock className="w-3 h-3 mr-1.5" />
                 Cache Management
               </Button>
             </div>
