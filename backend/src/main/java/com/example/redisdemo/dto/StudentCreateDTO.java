@@ -39,6 +39,14 @@ import java.math.BigDecimal;
 public class StudentCreateDTO {
 
     /**
+     * Roll number of the student.
+     * Cannot be blank and must be between 2-20 characters.
+     */
+    @NotBlank(message = "Roll number is required")
+    @Size(min = 2, max = 20, message = "Roll number must be between 2 and 20 characters")
+    private String rollNumber;
+
+    /**
      * Full name of the student.
      * Cannot be blank and must be between 2-100 characters.
      */
@@ -54,6 +62,14 @@ public class StudentCreateDTO {
     @Email(message = "Email must be valid")
     @Size(max = 100, message = "Email must not exceed 100 characters")
     private String email;
+
+    /**
+     * Phone number.
+     * Cannot be blank and must be between 10-15 characters.
+     */
+    @NotBlank(message = "Phone is required")
+    @Size(min = 10, max = 15, message = "Phone must be between 10 and 15 characters")
+    private String phone;
 
     /**
      * Course name.
@@ -94,10 +110,15 @@ public class StudentCreateDTO {
     private String city;
 
     /**
-     * Phone number.
-     * Cannot be blank and must be between 10-15 characters.
+     * Full address of the student.
+     * Optional field - if provided, must be between 2-200 characters.
      */
-    @NotBlank(message = "Phone is required")
-    @Size(min = 10, max = 15, message = "Phone must be between 10 and 15 characters")
-    private String phone;
+    @Size(min = 2, max = 200, message = "Address must be between 2 and 200 characters")
+    private String address;
+
+    /**
+     * Status of the student.
+     * Default is ACTIVE.
+     */
+    private String status;
 }

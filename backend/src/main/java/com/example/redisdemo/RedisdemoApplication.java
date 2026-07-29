@@ -2,16 +2,15 @@ package com.example.redisdemo;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
  * Main Spring Boot Application Class
  * 
  * This is the entry point for the Redis Learning Project application.
  * 
- * WHY @EnableCaching is now enabled:
+ * WHY @EnableCaching is enabled:
  * - Phase 4: Spring Cache annotations become active
  * - Required for @Cacheable, @CachePut, @CacheEvict annotations to work
  * - Enables Spring's declarative caching support
@@ -20,21 +19,20 @@ import org.springframework.cache.annotation.EnableCaching;
  * - Phase 4: Spring Cache annotations become active
  * - Phases 5-14: All caching features depend on this
  * 
- * WHY database auto-configuration is excluded:
- * - Redis-focused testing without MySQL dependency
- * - Allows testing Redis features without database setup
- * - Phase 8-11 APIs can work without database
+ * WHY @EnableJpaRepositories is enabled:
+ * - Explicitly enables JPA repositories to avoid conflict with Redis repositories
+ * - Ensures StudentRepository is recognized as a JPA repository
+ * - Prevents Spring Data Redis from trying to treat JPA repositories as Redis repositories
  * 
  * ARCHITECTURE NOTES:
  * - Scans all components under com.example.redisdemo package
- * - Auto-configures Redis, Cache, Web, etc. (excludes DataSource and JPA)
- * - Loads configuration from application.properties
+ * - Auto-configures Redis, Cache, Web, DataSource, JPA, etc.
+ * - Supports both MySQL database and Redis caching
+ * - Explicit repository configuration to avoid conflicts
  */
-@SpringBootApplication(exclude = {
-    DataSourceAutoConfiguration.class,
-    HibernateJpaAutoConfiguration.class
-})
-@EnableCaching  // Enabled for Phase 4 (Spring Cache)
+@SpringBootApplication
+@EnableCaching
+@EnableJpaRepositories(basePackages = "com.example.redisdemo.repository")
 public class RedisdemoApplication {
 
 	public static void main(String[] args) {

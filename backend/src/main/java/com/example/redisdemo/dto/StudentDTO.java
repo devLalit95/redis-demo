@@ -44,6 +44,11 @@ public class StudentDTO {
     private Long id;
 
     /**
+     * Roll number of the student.
+     */
+    private String rollNumber;
+
+    /**
      * Full name of the student.
      */
     private String name;
@@ -52,6 +57,11 @@ public class StudentDTO {
      * Email address of the student.
      */
     private String email;
+
+    /**
+     * Phone number.
+     */
+    private String phone;
 
     /**
      * Course name.
@@ -79,9 +89,14 @@ public class StudentDTO {
     private String city;
 
     /**
-     * Phone number.
+     * Full address of the student.
      */
-    private String phone;
+    private String address;
+
+    /**
+     * Status of the student.
+     */
+    private String status;
 
     /**
      * Timestamp when the record was created.
@@ -92,9 +107,4 @@ public class StudentDTO {
      * Timestamp when the record was last updated.
      */
     private LocalDateTime updatedAt;
-
-    /**
-     * Additional message field for testing.
-     */
-    private String message;
 }

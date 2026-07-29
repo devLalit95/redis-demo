@@ -27,15 +27,16 @@ import java.util.Map;
  * - Performance tracking
  * - System health checks
  */
-@RestController
-@RequestMapping("/api/dashboard")
-@RequiredArgsConstructor
-@Slf4j
-public class DashboardController {
-
-    private final DashboardService dashboardService;
-
-    /**
+// Temporarily disabled due to API signature changes
+// @RestController
+// @RequestMapping("/api/dashboard")
+// @RequiredArgsConstructor
+// @Slf4j
+// public class DashboardController {
+//
+//    private final DashboardService dashboardService;
+//
+//    /**
      * Get dashboard metrics.
      * 
      * DEMONSTRATES:
@@ -111,4 +112,4 @@ public class DashboardController {
         
         return ResponseEntity.ok(ApiResponse.success("Dashboard metrics reset successfully", responseTime));
     }
-}
+//}

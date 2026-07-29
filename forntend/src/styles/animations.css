@@ -1,6 +1,7 @@
-/* Animations CSS - Custom animations using Framer Motion and CSS */
+/**
+ * Animations CSS - Keyframe Animations
+ */
 
-/* Fade animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -19,8 +20,7 @@
   }
 }
 
-/* Slide animations */
-@keyframes slideUp {
+@keyframes slideInUp {
   from {
     transform: translateY(20px);
     opacity: 0;
@@ -31,7 +31,7 @@
   }
 }
 
-@keyframes slideDown {
+@keyframes slideInDown {
   from {
     transform: translateY(-20px);
     opacity: 0;
@@ -42,18 +42,7 @@
   }
 }
 
-@keyframes slideLeft {
-  from {
-    transform: translateX(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideRight {
+@keyframes slideInLeft {
   from {
     transform: translateX(-20px);
     opacity: 0;
@@ -64,10 +53,20 @@
   }
 }
 
-/* Scale animations */
+@keyframes slideInRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 @keyframes scaleIn {
   from {
-    transform: scale(0.95);
+    transform: scale(0.9);
     opacity: 0;
   }
   to {
@@ -82,12 +81,11 @@
     opacity: 1;
   }
   to {
-    transform: scale(0.95);
+    transform: scale(0.9);
     opacity: 0;
   }
 }
 
-/* Spin animation */
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -97,7 +95,6 @@
   }
 }
 
-/* Pulse animation */
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -107,7 +104,6 @@
   }
 }
 
-/* Bounce animation */
 @keyframes bounce {
   0%, 100% {
     transform: translateY(0);
@@ -117,20 +113,15 @@
   }
 }
 
-/* Shake animation */
-@keyframes shake {
-  0%, 100% {
-    transform: translateX(0);
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
   }
-  10%, 30%, 50%, 70%, 90% {
-    transform: translateX(-5px);
-  }
-  20%, 40%, 60%, 80% {
-    transform: translateX(5px);
+  100% {
+    background-position: 1000px 0;
   }
 }
 
-/* Ripple animation */
 @keyframes ripple {
   0% {
     transform: scale(0);
@@ -142,37 +133,36 @@
   }
 }
 
-/* Utility classes for animations */
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
+.animate-fadeIn {
+  animation: fadeIn var(--transition-base) ease-in-out;
 }
 
-.animate-fade-out {
-  animation: fadeOut 0.3s ease-in-out;
+.animate-fadeOut {
+  animation: fadeOut var(--transition-base) ease-in-out;
 }
 
-.animate-slide-up {
-  animation: slideUp 0.4s ease-out;
+.animate-slideInUp {
+  animation: slideInUp var(--transition-slow) ease-out;
 }
 
-.animate-slide-down {
-  animation: slideDown 0.4s ease-out;
+.animate-slideInDown {
+  animation: slideInDown var(--transition-slow) ease-out;
 }
 
-.animate-slide-left {
-  animation: slideLeft 0.4s ease-out;
+.animate-slideInLeft {
+  animation: slideInLeft var(--transition-slow) ease-out;
 }
 
-.animate-slide-right {
-  animation: slideRight 0.4s ease-out;
+.animate-slideInRight {
+  animation: slideInRight var(--transition-slow) ease-out;
 }
 
-.animate-scale-in {
-  animation: scaleIn 0.3s ease-out;
+.animate-scaleIn {
+  animation: scaleIn var(--transition-base) ease-in-out;
 }
 
-.animate-scale-out {
-  animation: scaleOut 0.3s ease-out;
+.animate-scaleOut {
+  animation: scaleOut var(--transition-base) ease-in-out;
 }
 
 .animate-spin {
@@ -187,6 +177,13 @@
   animation: bounce 1s infinite;
 }
 
-.animate-shake {
-  animation: shake 0.5s ease-in-out;
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  background-size: 1000px 100%;
 }

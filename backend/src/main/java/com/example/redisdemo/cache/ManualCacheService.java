@@ -1,20 +1,26 @@
 package com.example.redisdemo.cache;
 
+import com.example.redisdemo.dto.ApiResponse;
+import com.example.redisdemo.dto.StudentDTO;
+import com.example.redisdemo.entity.Student;
+import com.example.redisdemo.exception.ResourceNotFoundException;
+import com.example.redisdemo.metrics.CacheStatisticsService;
+import com.example.redisdemo.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Manual Cache Service
  * 
  * This service demonstrates manual caching implementation without @Cacheable.
  * This is Phase 3 of the project - Manual Cache Implementation.
- * 
- * NOTE: StudentRepository dependency removed for Redis-only testing
  * 
  * WHY this service exists:
  * - Teaches the cache-aside pattern through manual implementation
@@ -38,8 +44,9 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class ManualCacheService {
 
-    // Removed StudentRepository dependency for Redis-only testing
     private final RedisTemplate<String, Object> redisTemplate;
+    private final StudentRepository studentRepository;
+    private final CacheStatisticsService cacheStatisticsService;
 
     private static final String CACHE_PREFIX = "manual:student:";
     private static final long CACHE_TTL_SECONDS = 300; // 5 minutes
@@ -69,111 +76,272 @@ public class ManualCacheService {
      * - Subsequent calls: Cache hit (until TTL expires)
      * 
      * @param id The student ID
-     * @return The student DTO
+     * @return API response with student data and performance metadata
      */
-    public Object getStudentById(Long id) {
+    @Transactional(readOnly = true)
+    public ApiResponse<StudentDTO> getStudentById(Long id) {
+        long startTime = System.currentTimeMillis();
         String cacheKey = CACHE_PREFIX + id;
         
-        log.info("Manual Cache: Fetching student ID: {}", id);
+        log.info("🔵 MANUAL CACHE: Fetching student ID: {}", id);
         
         // Step 1: Check Redis cache
+        long redisStartTime = System.currentTimeMillis();
         Object cachedStudent = redisTemplate.opsForValue().get(cacheKey);
+        long redisTime = System.currentTimeMillis() - redisStartTime;
         
         if (cachedStudent != null) {
             // CACHE HIT
-            log.info("✅ CACHE HIT: Student found in Redis for ID: {}", id);
-            log.info("Cache Key: {}", cacheKey);
-            return cachedStudent;
+            long executionTime = System.currentTimeMillis() - startTime;
+            
+            cacheStatisticsService.recordCacheHit("MANUAL", executionTime);
+            
+            ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                    .executionTime(executionTime + " ms")
+                    .databaseTime("0 ms")
+                    .redisTime(redisTime + " ms")
+                    .cacheHit(true)
+                    .cacheMiss(false)
+                    .cacheType("MANUAL")
+                    .dataSource("REDIS")
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+            
+            log.info("✅ CACHE HIT: Student found in Redis for ID: {} in {}ms", id, executionTime);
+            
+            StudentDTO studentDTO = (StudentDTO) cachedStudent;
+            return ApiResponse.success(studentDTO, metadata, "Student fetched from manual cache");
         }
         
         // CACHE MISS - Fetch from database
         log.info("❌ CACHE MISS: Student not found in Redis for ID: {}", id);
-        log.info("Fetching from database (simulated for Redis-only testing)");
         
-        // Create a placeholder student object
-        Object studentDTO = Map.of(
-            "id", id,
-            "name", "Test Student " + id,
-            "email", "test" + id + "@example.com",
-            "message", "Database fetch simulated (Redis-only testing)"
-        );
+        long dbStartTime = System.currentTimeMillis();
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
+        long dbTime = System.currentTimeMillis() - dbStartTime;
+        
+        StudentDTO studentDTO = mapToDTO(student);
         
         // Store in Redis cache
+        long redisWriteStartTime = System.currentTimeMillis();
         redisTemplate.opsForValue().set(cacheKey, studentDTO, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
-        log.info("✅ Student stored in Redis cache with TTL: {} seconds", CACHE_TTL_SECONDS);
+        long redisWriteTime = System.currentTimeMillis() - redisWriteStartTime;
         
-        return studentDTO;
+        long executionTime = System.currentTimeMillis() - startTime;
+        
+        cacheStatisticsService.recordCacheMiss("MANUAL", executionTime);
+        cacheStatisticsService.recordRedisWrite("MANUAL");
+        
+        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                .executionTime(executionTime + " ms")
+                .databaseTime(dbTime + " ms")
+                .redisTime((redisTime + redisWriteTime) + " ms")
+                .cacheHit(false)
+                .cacheMiss(true)
+                .cacheType("MANUAL")
+                .dataSource("MYSQL")
+                .timestamp(System.currentTimeMillis())
+                .build();
+        
+        log.info("✅ Student stored in Redis cache with TTL: {} seconds", CACHE_TTL_SECONDS);
+        log.info("🔵 MANUAL CACHE: Student fetched in {}ms (DB: {}ms, Redis: {}ms)", 
+                executionTime, dbTime, redisTime + redisWriteTime);
+        
+        return ApiResponse.success(studentDTO, metadata, "Student fetched from database and cached");
     }
 
     /**
      * Get all students with manual caching.
      * 
-     * @return List of all students
+     * @return API response with all students and performance metadata
      */
-    public Object getAllStudents() {
+    @Transactional(readOnly = true)
+    public ApiResponse<List<StudentDTO>> getAllStudents() {
+        long startTime = System.currentTimeMillis();
         String cacheKey = CACHE_PREFIX + "all";
         
-        log.info("Manual Cache: Fetching all students");
+        log.info("🔵 MANUAL CACHE: Fetching all students");
         
         // Check cache
+        long redisStartTime = System.currentTimeMillis();
         Object cachedStudents = redisTemplate.opsForValue().get(cacheKey);
+        long redisTime = System.currentTimeMillis() - redisStartTime;
         
         if (cachedStudents != null) {
-            log.info("✅ CACHE HIT: All students found in Redis");
-            return cachedStudents;
+            long executionTime = System.currentTimeMillis() - startTime;
+            
+            cacheStatisticsService.recordCacheHit("MANUAL", executionTime);
+            
+            ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                    .executionTime(executionTime + " ms")
+                    .databaseTime("0 ms")
+                    .redisTime(redisTime + " ms")
+                    .cacheHit(true)
+                    .cacheMiss(false)
+                    .cacheType("MANUAL")
+                    .dataSource("REDIS")
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+            
+            log.info("✅ CACHE HIT: All students found in Redis in {}ms", executionTime);
+            
+            @SuppressWarnings("unchecked")
+            List<StudentDTO> studentDTOs = (List<StudentDTO>) cachedStudents;
+            return ApiResponse.success(studentDTOs, metadata, "All students fetched from manual cache");
         }
         
         // Cache miss
         log.info("❌ CACHE MISS: All students not found in Redis");
-        log.info("Fetching from database (simulated for Redis-only testing)");
         
-        // Create placeholder data
-        Object students = Map.of(
-            "message", "Database fetch simulated (Redis-only testing)",
-            "count", 0
-        );
+        long dbStartTime = System.currentTimeMillis();
+        List<Student> students = studentRepository.findAll();
+        long dbTime = System.currentTimeMillis() - dbStartTime;
+        
+        List<StudentDTO> studentDTOs = students.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
         
         // Store in cache
-        redisTemplate.opsForValue().set(cacheKey, students, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
-        log.info("✅ All students stored in Redis cache");
+        long redisWriteStartTime = System.currentTimeMillis();
+        redisTemplate.opsForValue().set(cacheKey, studentDTOs, CACHE_TTL_SECONDS, TimeUnit.SECONDS);
+        long redisWriteTime = System.currentTimeMillis() - redisWriteStartTime;
         
-        return students;
+        long executionTime = System.currentTimeMillis() - startTime;
+        
+        cacheStatisticsService.recordCacheMiss("MANUAL", executionTime);
+        cacheStatisticsService.recordRedisWrite("MANUAL");
+        
+        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                .executionTime(executionTime + " ms")
+                .databaseTime(dbTime + " ms")
+                .redisTime((redisTime + redisWriteTime) + " ms")
+                .cacheHit(false)
+                .cacheMiss(true)
+                .cacheType("MANUAL")
+                .dataSource("MYSQL")
+                .timestamp(System.currentTimeMillis())
+                .build();
+        
+        log.info("✅ All students stored in Redis cache");
+        log.info("🔵 MANUAL CACHE: Fetched {} students in {}ms (DB: {}ms, Redis: {}ms)", 
+                studentDTOs.size(), executionTime, dbTime, redisTime + redisWriteTime);
+        
+        return ApiResponse.success(studentDTOs, metadata, "All students fetched from database and cached");
     }
 
     /**
      * Delete student from cache by ID.
      * 
      * @param id The student ID
+     * @return API response with eviction result
      */
-    public void evictStudentCache(Long id) {
+    public ApiResponse<String> evictStudentCache(Long id) {
         String cacheKey = CACHE_PREFIX + id;
         
-        log.info("Manual Cache: Evicting student cache for ID: {}", id);
+        log.info("🔵 MANUAL CACHE: Evicting student cache for ID: {}", id);
         
         Boolean deleted = redisTemplate.delete(cacheKey);
         
         if (Boolean.TRUE.equals(deleted)) {
+            cacheStatisticsService.recordEviction("MANUAL");
             log.info("✅ Student cache evicted successfully for ID: {}", id);
+            return ApiResponse.success("Cache evicted successfully", 
+                    ApiResponse.Metadata.builder()
+                            .executionTime("0 ms")
+                            .databaseTime("0 ms")
+                            .redisTime("0 ms")
+                            .cacheHit(false)
+                            .cacheMiss(false)
+                            .cacheType("MANUAL")
+                            .dataSource("REDIS")
+                            .timestamp(System.currentTimeMillis())
+                            .build(), 
+                    "Student cache evicted successfully");
         } else {
             log.info("⚠️ No cache entry found for ID: {}", id);
+            return ApiResponse.success("No cache entry found", 
+                    ApiResponse.Metadata.builder()
+                            .executionTime("0 ms")
+                            .databaseTime("0 ms")
+                            .redisTime("0 ms")
+                            .cacheHit(false)
+                            .cacheMiss(false)
+                            .cacheType("MANUAL")
+                            .dataSource("REDIS")
+                            .timestamp(System.currentTimeMillis())
+                            .build(), 
+                    "No cache entry found");
         }
     }
 
     /**
      * Delete all students cache.
+     * 
+     * @return API response with eviction result
      */
-    public void evictAllStudentsCache() {
+    public ApiResponse<String> evictAllStudentsCache() {
         String cacheKey = CACHE_PREFIX + "all";
         
-        log.info("Manual Cache: Evicting all students cache");
+        log.info("🔵 MANUAL CACHE: Evicting all students cache");
         
         Boolean deleted = redisTemplate.delete(cacheKey);
         
         if (Boolean.TRUE.equals(deleted)) {
+            cacheStatisticsService.recordEviction("MANUAL");
             log.info("✅ All students cache evicted successfully");
+            return ApiResponse.success("All students cache evicted successfully", 
+                    ApiResponse.Metadata.builder()
+                            .executionTime("0 ms")
+                            .databaseTime("0 ms")
+                            .redisTime("0 ms")
+                            .cacheHit(false)
+                            .cacheMiss(false)
+                            .cacheType("MANUAL")
+                            .dataSource("REDIS")
+                            .timestamp(System.currentTimeMillis())
+                            .build(), 
+                    "All students cache evicted successfully");
         } else {
             log.info("⚠️ No cache entry found for all students");
+            return ApiResponse.success("No cache entry found", 
+                    ApiResponse.Metadata.builder()
+                            .executionTime("0 ms")
+                            .databaseTime("0 ms")
+                            .redisTime("0 ms")
+                            .cacheHit(false)
+                            .cacheMiss(false)
+                            .cacheType("MANUAL")
+                            .dataSource("REDIS")
+                            .timestamp(System.currentTimeMillis())
+                            .build(), 
+                    "No cache entry found");
         }
+    }
+
+    /**
+     * Map Student entity to StudentDTO.
+     * 
+     * @param student The entity to convert
+     * @return The DTO representation
+     */
+    private StudentDTO mapToDTO(Student student) {
+        StudentDTO dto = new StudentDTO();
+        dto.setId(student.getId());
+        dto.setRollNumber(student.getRollNumber());
+        dto.setName(student.getName());
+        dto.setEmail(student.getEmail());
+        dto.setPhone(student.getPhone());
+        dto.setCourse(student.getCourse());
+        dto.setBranch(student.getBranch());
+        dto.setSemester(student.getSemester());
+        dto.setCgpa(student.getCgpa());
+        dto.setCity(student.getCity());
+        dto.setAddress(student.getAddress());
+        dto.setStatus(student.getStatus());
+        dto.setCreatedAt(student.getCreatedAt());
+        dto.setUpdatedAt(student.getUpdatedAt());
+        return dto;
     }
 
     /**

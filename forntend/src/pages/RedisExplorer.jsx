@@ -45,40 +45,68 @@ const RedisExplorer = () => {
   const queryClient = useQueryClient();
   
   // Fetch all keys
-  const { data: keysData, isLoading: keysLoading, refetch: refetchKeys } = useQuery({
+  const { data: keysData, isLoading: keysLoading, error: keysError, refetch: refetchKeys } = useQuery({
     queryKey: ['redis-keys', searchQuery],
-    queryFn: () => redisApi.key.getKeysByPattern(searchQuery || '*'),
+    queryFn: async () => {
+      try {
+        const response = await redisApi.key.getKeysByPattern(searchQuery || '*');
+        console.log('Keys API response:', response);
+        return response;
+      } catch (error) {
+        console.error('Keys API error:', error);
+        throw error;
+      }
+    },
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 10000, // 10 seconds
   });
   
   // Fetch database size and keys
-  const { data: dbSize } = useQuery({
+  const { data: dbSize, isLoading: dbSizeLoading, error: dbSizeError } = useQuery({
     queryKey: ['redis-db-size'],
     queryFn: monitoringApi.getDatabaseSize,
+    retry: 1,
+    staleTime: 30000, // 30 seconds
   });
   
   // Fetch Redis info for statistics
-  const { data: redisInfo } = useQuery({
+  const { data: redisInfo, isLoading: redisInfoLoading, error: redisInfoError } = useQuery({
     queryKey: ['redis-info'],
     queryFn: monitoringApi.getRedisInfo,
+    retry: 1,
+    staleTime: 30000, // 30 seconds
   });
   
   // Delete key mutation
   const deleteKeyMutation = useMutation({
-    mutationFn: (key) => redisApi.key.deleteKey(key),
+    mutationFn: async (key) => {
+      console.log('Deleting key:', key);
+      const response = await redisApi.key.deleteKey(key);
+      console.log('Delete key response:', response);
+      return response;
+    },
     onSuccess: () => {
       toast.success('Key deleted successfully');
       queryClient.invalidateQueries(['redis-keys']);
       queryClient.invalidateQueries(['redis-db-size']);
     },
     onError: (error) => {
+      console.error('Delete key error:', error);
       toast.error(error.userMessage || 'Failed to delete key');
     },
   });
   
   // String operations
   const stringMutation = useMutation({
-    mutationFn: ({ key, value }) => redisApi.string.setString(key, value),
-    onSuccess: () => {
+    mutationFn: async ({ key, value }) => {
+      console.log('Adding key:', key, 'value:', value);
+      const response = await redisApi.string.setString(key, value);
+      console.log('Add key response:', response);
+      return response;
+    },
+    onSuccess: (data) => {
+      console.log('Key added successfully, invalidating queries');
       toast.success('Key added successfully');
       queryClient.invalidateQueries(['redis-keys']);
       queryClient.invalidateQueries(['redis-db-size']);
@@ -87,40 +115,69 @@ const RedisExplorer = () => {
       setNewKeyValue('');
     },
     onError: (error) => {
+      console.error('Add key error:', error);
       toast.error(error.userMessage || 'Failed to add key');
     },
   });
   
   // Get key type mutation
   const getKeyTypeMutation = useMutation({
-    mutationFn: (key) => redisApi.key.getKeyType(key),
+    mutationFn: async (key) => {
+      console.log('Getting key type for:', key);
+      try {
+        const response = await redisApi.key.getKeyType(key);
+        console.log('Key type response:', response);
+        return response;
+      } catch (error) {
+        console.error('Get key type error:', error);
+        // Default to string if type check fails
+        return { data: { data: 'string' } };
+      }
+    },
   });
   
   // View key value based on type
   const viewKeyValueMutation = useMutation({
-    mutationFn: ({ key, type }) => {
-      switch (type) {
-        case 'string':
-          return redisApi.string.getString(key);
-        case 'hash':
-          return redisApi.hash.getAllHashFields(key);
-        case 'list':
-          return redisApi.list.getList(key);
-        case 'set':
-          return redisApi.set.getSetMembers(key);
-        case 'zset':
-          return redisApi.sortedSet.getSortedSet(key);
-        default:
-          return Promise.resolve({ data: null });
+    mutationFn: async ({ key, type }) => {
+      console.log('Viewing key:', key, 'type:', type);
+      try {
+        let response;
+        switch (type) {
+          case 'string':
+            response = await redisApi.string.getString(key);
+            break;
+          case 'hash':
+            response = await redisApi.hash.getAllHashFields(key);
+            break;
+          case 'list':
+            response = await redisApi.list.getList(key);
+            break;
+          case 'set':
+            response = await redisApi.set.getSetMembers(key);
+            break;
+          case 'zset':
+            response = await redisApi.sortedSet.getSortedSet(key);
+            break;
+          default:
+            // Try to get value directly
+            response = await redisApi.key.getValue(key);
+        }
+        console.log('Key value response:', response);
+        return response;
+      } catch (error) {
+        console.error('Error getting key value:', error);
+        throw error;
       }
     },
     onSuccess: (data) => {
+      console.log('Key value data:', data);
       setKeyValue(data);
       setViewModalOpen(true);
     },
-    onError: () => {
-      toast.error('Failed to retrieve key value');
-    },
+    onError: (error) => {
+      console.error('View key error:', error);
+      toast.error(error.userMessage || 'Failed to retrieve key value');
+    }
   });
   
   const handleAddKey = (type) => {
@@ -139,10 +196,16 @@ const RedisExplorer = () => {
   };
   
   const handleViewKey = async (key) => {
-    setSelectedKey(key);
-    const typeData = await getKeyTypeMutation.mutateAsync(key);
-    const keyType = typeData?.data || 'string';
-    viewKeyValueMutation.mutate({ key, type: keyType });
+    try {
+      setSelectedKey(key);
+      const typeData = await getKeyTypeMutation.mutateAsync(key);
+      const keyType = typeData?.data?.data || typeData?.data || 'string';
+      console.log('Viewing key with type:', keyType);
+      viewKeyValueMutation.mutate({ key, type: keyType });
+    } catch (error) {
+      console.error('Handle view key error:', error);
+      toast.error('Failed to view key');
+    }
   };
   
   const handleAddStringKey = (e) => {
@@ -155,20 +218,70 @@ const RedisExplorer = () => {
   };
   
   const getKeysList = () => {
-    if (!keysData?.data) return [];
-    let keys = Array.from(keysData.data);
+    // Handle different response structures
+    let keys = [];
     
-    if (selectedType !== 'all') {
-      // Filter by type would require getting type for each key
-      // For now, we'll show all keys when a type is selected
-      // In a real implementation, you'd want to batch type checks
+    try {
+      console.log('keysData:', keysData);
+      console.log('keysData type:', typeof keysData);
+      console.log('keysData.data:', keysData?.data);
+      console.log('keysData.data type:', typeof keysData?.data);
+      
+      // The response is a full Axios object: { data: { data: [...], success: true, ... }, status: 200, ... }
+      // So the actual keys array is at keysData.data.data
+      if (keysData?.data?.data && Array.isArray(keysData.data.data)) {
+        keys = keysData.data.data;
+        console.log('Using keysData.data.data as array');
+      } else if (keysData?.data && Array.isArray(keysData.data)) {
+        keys = keysData.data;
+        console.log('Using keysData.data as array');
+      } else if (Array.isArray(keysData)) {
+        keys = keysData;
+        console.log('Using keysData as array');
+      } else if (keysData && typeof keysData === 'object') {
+        // Try to extract data from nested structure
+        if (keysData.data !== undefined) {
+          if (Array.isArray(keysData.data)) {
+            keys = keysData.data;
+            console.log('Using keysData.data as array (nested)');
+          } else if (typeof keysData.data === 'object' && keysData.data !== null) {
+            if (keysData.data.data && Array.isArray(keysData.data.data)) {
+              keys = keysData.data.data;
+              console.log('Using keysData.data.data as array (double nested)');
+            } else {
+              keys = Object.keys(keysData.data);
+              console.log('Using Object.keys(keysData.data)');
+            }
+          }
+        } else {
+          // Check if keysData itself is the array
+          if (Array.isArray(Object.values(keysData))) {
+            const values = Object.values(keysData);
+            keys = values.filter(v => typeof v === 'string');
+            console.log('Using filtered Object.values as keys');
+          }
+        }
+      }
+      
+      console.log('Final extracted keys:', keys);
+      console.log('Keys is array:', Array.isArray(keys));
+      console.log('Keys length:', keys.length);
+      
+      if (selectedType !== 'all') {
+        // Filter by type would require getting type for each key
+        // For now, we'll show all keys when a type is selected
+        // In a real implementation, you'd want to batch type checks
+      }
+      
+      if (searchQuery) {
+        keys = keys.filter(key => key.toLowerCase().includes(searchQuery.toLowerCase()));
+      }
+      
+      return keys;
+    } catch (error) {
+      console.error('Error in getKeysList:', error);
+      return [];
     }
-    
-    if (searchQuery) {
-      keys = keys.filter(key => key.toLowerCase().includes(searchQuery.toLowerCase()));
-    }
-    
-    return keys;
   };
   
   const getKeyTypeColor = (type) => {
@@ -212,9 +325,15 @@ const RedisExplorer = () => {
           </div>
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400">Total Keys</p>
-            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {dbSize?.data || 0}
-            </p>
+            {dbSizeLoading ? (
+              <Loader size="sm" />
+            ) : dbSizeError ? (
+              <p className="text-lg font-semibold text-danger-600 dark:text-danger-400">Error</p>
+            ) : (
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {dbSize?.data?.data || dbSize?.data || 0}
+              </p>
+            )}
           </div>
         </div>
         
@@ -226,9 +345,15 @@ const RedisExplorer = () => {
           </div>
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400">Memory Used</p>
-            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {redisInfo?.data?.used_memory_human || 'N/A'}
-            </p>
+            {redisInfoLoading ? (
+              <Loader size="sm" />
+            ) : redisInfoError ? (
+              <p className="text-lg font-semibold text-danger-600 dark:text-danger-400">Error</p>
+            ) : (
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {redisInfo?.data?.data?.used_memory_human || redisInfo?.data?.used_memory_human || 'N/A'}
+              </p>
+            )}
           </div>
         </div>
         
@@ -265,7 +390,7 @@ const RedisExplorer = () => {
                 )}
               >
                 <Layers className="w-5 h-5" />
-                All Types ({keysList.length})
+                All Types ({Array.isArray(keysList) ? keysList.length : 0})
               </button>
               
               {dataTypes.map((type) => {
@@ -315,14 +440,31 @@ const RedisExplorer = () => {
           {/* Keys List */}
           <Card>
             <CardHeader>
-              <CardTitle>Keys ({keysList.length})</CardTitle>
+              <CardTitle>Keys ({Array.isArray(keysList) ? keysList.length : 0})</CardTitle>
             </CardHeader>
             <CardBody>
               {keysLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader size="md" text="Loading keys..." />
                 </div>
-              ) : keysList.length === 0 ? (
+              ) : keysError ? (
+                <div className="text-center py-8">
+                  <Database className="w-16 h-16 text-danger-300 dark:text-danger-600 mx-auto mb-4" />
+                  <Heading level={3} className="text-gray-900 dark:text-gray-100 mb-2">
+                    Error Loading Keys
+                  </Heading>
+                  <Text className="text-gray-500 dark:text-gray-400 mb-4">
+                    {keysError.userMessage || 'Failed to load Redis keys'}
+                  </Text>
+                  <Button
+                    variant="primary"
+                    onClick={() => refetchKeys()}
+                    leftIcon={<RefreshCw className="w-4 h-4" />}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : !Array.isArray(keysList) || keysList.length === 0 ? (
                 <div className="text-center py-12">
                   <Database className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                   <Heading level={3} className="text-gray-900 dark:text-gray-100 mb-2">
@@ -343,9 +485,9 @@ const RedisExplorer = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {keysList.map((key) => (
+                  {keysList.map((key, index) => (
                     <motion.div
-                      key={key}
+                      key={key || index}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -441,18 +583,18 @@ const RedisExplorer = () => {
             <>
               <div className="flex items-center gap-2">
                 <Badge variant={getKeyTypeColor('string')}>
-                  {keyValue?.data ? 'Data' : 'Empty'}
+                  {keyValue?.data?.data ? 'Data' : 'Empty'}
                 </Badge>
-                {keyValue?.responseTime && (
+                {keyValue?.data?.metadata?.executionTime && (
                   <span className="text-sm text-gray-500 dark:text-gray-400">
                     <Clock className="w-3 h-3 inline mr-1" />
-                    {keyValue.responseTime}ms
+                    {keyValue.data.metadata.executionTime}
                   </span>
                 )}
               </div>
               <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
                 <pre className="text-sm text-gray-900 dark:text-gray-100 overflow-x-auto">
-                  {JSON.stringify(keyValue?.data, null, 2)}
+                  {JSON.stringify(keyValue?.data?.data, null, 2)}
                 </pre>
               </div>
             </>

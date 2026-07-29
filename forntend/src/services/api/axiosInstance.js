@@ -66,31 +66,46 @@ axiosInstance.interceptors.response.use(
       
       console.error(`[API Error] ${status}:`, data?.message || error.message);
       
-      // Handle specific status codes
+      // Handle specific status codes with actual backend error messages
       switch (status) {
         case 400:
-          error.message = data?.message || 'Bad request. Please check your input.';
+          error.message = data?.message || data?.error || 'Bad request. Please check your input.';
           break;
         case 401:
-          error.message = 'Unauthorized access. Please authenticate.';
+          error.message = data?.message || 'Unauthorized access. Please authenticate.';
           break;
         case 403:
-          error.message = 'Access forbidden. You don\'t have permission.';
+          error.message = data?.message || 'Access forbidden. You don\'t have permission.';
           break;
         case 404:
-          error.message = 'Resource not found. Please check the endpoint.';
+          error.message = data?.message || 'Resource not found. Please check the endpoint.';
+          break;
+        case 409:
+          error.message = data?.message || 'Conflict. The resource already exists.';
+          break;
+        case 422:
+          error.message = data?.message || 'Validation error. Please check your input.';
           break;
         case 500:
-          error.message = 'Server error. Please try again later.';
+          // Extract actual backend error message for 500 errors
+          error.message = data?.message || data?.error || 'Server error. Please try again later.';
+          break;
+        case 502:
+          error.message = data?.message || 'Bad gateway. The server is temporarily unavailable.';
           break;
         case 503:
-          error.message = 'Service unavailable. Please try again later.';
+          error.message = data?.message || 'Service unavailable. Please try again later.';
+          break;
+        case 504:
+          error.message = data?.message || 'Gateway timeout. The request took too long.';
           break;
         default:
-          error.message = data?.message || error.message || 'An unexpected error occurred.';
+          error.message = data?.message || data?.error || error.message || 'An unexpected error occurred.';
       }
       
       error.userMessage = error.message;
+      error.backendMessage = data?.message || data?.error;
+      error.status = status;
     } else if (error.request) {
       // Request made but no response received - likely CORS or network error
       console.error('[API Network Error] No response received:', error.message);

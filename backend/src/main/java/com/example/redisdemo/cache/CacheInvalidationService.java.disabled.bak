@@ -1,5 +1,11 @@
 package com.example.redisdemo.cache;
 
+import com.example.redisdemo.dto.ApiResponse;
+import com.example.redisdemo.dto.StudentDTO;
+import com.example.redisdemo.entity.Student;
+import com.example.redisdemo.exception.ResourceNotFoundException;
+import com.example.redisdemo.metrics.CacheStatisticsService;
+import com.example.redisdemo.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -7,8 +13,8 @@ import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -50,8 +56,9 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class CacheInvalidationService {
 
-    // Removed StudentRepository dependency for Redis-only testing
     private final RedisTemplate<String, Object> redisTemplate;
+    private final StudentRepository studentRepository;
+    private final CacheStatisticsService cacheStatisticsService;
 
     // ==================== DELETE ONE CACHE ====================
 

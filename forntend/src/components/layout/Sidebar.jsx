@@ -17,6 +17,10 @@ import {
   Plus,
   List as ListIcon,
   Layers as SetIcon,
+  Users,
+  Zap,
+  History,
+  TestTube,
 } from 'lucide-react';
 
 /**
@@ -33,6 +37,7 @@ const Sidebar = ({ isOpen, collapsed, onClose }) => {
       category: 'Main',
       items: [
         { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+        { name: 'Student CRUD', href: '/student-crud', icon: Users },
         { name: 'Redis Explorer', href: '/redis-explorer', icon: Database },
         { name: 'String Operations', href: '/string-operations', icon: FileText },
         { name: 'Hash Operations', href: '/hash-operations', icon: Hash },
@@ -43,10 +48,11 @@ const Sidebar = ({ isOpen, collapsed, onClose }) => {
       ],
     },
     {
-      category: 'Monitoring',
+      category: 'Performance',
       items: [
-        { name: 'Performance', href: '/performance', icon: Activity },
-        { name: 'Metrics', href: '/metrics', icon: BarChart3 },
+        { name: 'Performance Comparison', href: '/performance-comparison', icon: Zap },
+        { name: 'Request History', href: '/request-history', icon: History },
+        { name: 'Load Testing', href: '/load-testing', icon: TestTube },
         { name: 'Redis Monitor', href: '/redis-monitor', icon: Monitor },
       ],
     },

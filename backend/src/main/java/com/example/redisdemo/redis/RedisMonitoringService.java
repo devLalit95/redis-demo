@@ -75,11 +75,17 @@ public class RedisMonitoringService {
         log.info("Redis Monitoring: INFO command");
         
         try {
+            if (redisTemplate.getConnectionFactory() == null) {
+                throw new RuntimeException("Redis connection factory is not available");
+            }
+            
             Properties info = redisTemplate.getConnectionFactory().getConnection().info();
             Map<String, Object> infoMap = new HashMap<>();
             
-            for (String key : info.stringPropertyNames()) {
-                infoMap.put(key, info.getProperty(key));
+            if (info != null) {
+                for (String key : info.stringPropertyNames()) {
+                    infoMap.put(key, info.getProperty(key));
+                }
             }
             
             log.info("Redis INFO retrieved successfully");
@@ -87,7 +93,7 @@ public class RedisMonitoringService {
             
         } catch (Exception e) {
             log.error("Error getting Redis INFO", e);
-            throw new RuntimeException("Failed to get Redis INFO", e);
+            throw new RuntimeException("Failed to get Redis INFO: " + e.getMessage(), e);
         }
     }
 
@@ -264,13 +270,17 @@ public class RedisMonitoringService {
         log.info("Redis Monitoring: DBSIZE command");
         
         try {
+            if (redisTemplate.getConnectionFactory() == null) {
+                throw new RuntimeException("Redis connection factory is not available");
+            }
+            
             Long dbSize = redisTemplate.getConnectionFactory().getConnection().dbSize();
             log.info("Database size: {} keys", dbSize);
             return dbSize != null ? dbSize : 0;
             
         } catch (Exception e) {
             log.error("Error getting DBSIZE", e);
-            throw new RuntimeException("Failed to get DBSIZE", e);
+            throw new RuntimeException("Failed to get DBSIZE: " + e.getMessage(), e);
         }
     }
 

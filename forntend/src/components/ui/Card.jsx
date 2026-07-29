@@ -9,6 +9,7 @@ import { cn } from '../../utils/cn';
  * @param {boolean} props.bordered - Bordered variant
  * @param {boolean} props.elevated - Elevated shadow
  * @param {boolean} props.interactive - Interactive hover effect
+ * @param {string} props.title - Card title
  * @param {React.ReactNode} props.children - Card content
  * @param {string} props.className - Additional classes
  */
@@ -17,6 +18,7 @@ const Card = React.forwardRef(({
   bordered = false,
   elevated = false,
   interactive = false,
+  title,
   children,
   className,
   ...rest
@@ -32,6 +34,7 @@ const Card = React.forwardRef(({
   
   return (
     <div ref={ref} className={classes} {...rest}>
+      {title && <div className="card-header"><h3 className="card-title">{title}</h3></div>}
       {children}
     </div>
   );
@@ -75,3 +78,4 @@ const CardFooter = ({ children, className }) => {
 };
 
 export { Card, CardHeader, CardTitle, CardSubtitle, CardBody, CardFooter };
+export default Card;

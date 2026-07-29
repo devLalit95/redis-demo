@@ -1,276 +1,427 @@
 /**
- * Redis API Service
- * Handles all Redis operations API calls
+ * Redis API
+ * All Redis-related API operations
  */
 
 import axiosInstance from './axiosInstance';
+import { API_ENDPOINTS } from '../../constants';
 
 /**
- * String Operations
+ * Redis API object containing all Redis operations
  */
-export const redisStringApi = {
-  /**
-   * Store a string value in Redis
-   */
-  setString: async (key, value) => {
-    const response = await axiosInstance.post('/api/redis/string', { key, value });
-    return response.data;
+export const redisApi = {
+  // Key operations
+  key: {
+    /**
+     * Get all Redis keys matching pattern
+     * @param {string} pattern - Key pattern (default: '*')
+     * @returns {Promise} Axios response with keys
+     */
+    getKeysByPattern: (pattern = '*') => {
+      return axiosInstance.get(API_ENDPOINTS.REDIS.KEYS, { params: { pattern } });
+    },
+
+    /**
+     * Get Redis key value
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response with key value
+     */
+    getValue: (key) => {
+      const url = API_ENDPOINTS.REDIS.GET.replace(':key', key);
+      return axiosInstance.get(url);
+    },
+
+    /**
+     * Get key type
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response with key type
+     */
+    getKeyType: (key) => {
+      return axiosInstance.get(`/api/redis-explorer/keys/${key}/type`);
+    },
+
+    /**
+     * Delete Redis key
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response
+     */
+    deleteKey: (key) => {
+      const url = API_ENDPOINTS.REDIS.DELETE.replace(':key', key);
+      return axiosInstance.delete(url);
+    },
   },
-  
-  /**
-   * Get a string value from Redis
-   */
-  getString: async (key) => {
-    const response = await axiosInstance.get(`/api/redis/string/${key}`);
-    return response.data;
+
+  // String operations namespace
+  string: {
+    /**
+     * Store a string value in Redis
+     * @param {string} key - Redis key
+     * @param {string} value - String value
+     * @returns {Promise} Axios response
+     */
+    setString: (key, value) => {
+      return axiosInstance.post('/api/cache-playground/string', { key, value });
+    },
+
+    /**
+     * Get a string value from Redis
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response
+     */
+    getString: (key) => {
+      return axiosInstance.get(`/api/cache-playground/string/${key}`);
+    },
   },
-  
-  /**
-   * Store a JSON object in Redis
-   */
-  setJson: async (key, value) => {
-    const response = await axiosInstance.post('/api/redis/json', { key, value });
-    return response.data;
+
+  // Hash operations namespace
+  hash: {
+    /**
+     * Store a field in a Redis hash
+     * @param {string} key - Redis key
+     * @param {string} field - Hash field
+     * @param {string} value - Field value
+     * @returns {Promise} Axios response
+     */
+    setHashField: (key, field, value) => {
+      return axiosInstance.post('/api/cache-playground/hash', { key, field, value });
+    },
+
+    /**
+     * Get a field from a Redis hash
+     * @param {string} key - Redis key
+     * @param {string} field - Hash field
+     * @returns {Promise} Axios response
+     */
+    getHashField: (key, field) => {
+      return axiosInstance.get(`/api/cache-playground/hash/${key}/${field}`);
+    },
+
+    /**
+     * Get all fields from a Redis hash
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response
+     */
+    getAllHashFields: (key) => {
+      return axiosInstance.get(`/api/cache-playground/hash/${key}`);
+    },
+
+    /**
+     * Delete a field from a Redis hash
+     * @param {string} key - Redis key
+     * @param {string} field - Hash field
+     * @returns {Promise} Axios response
+     */
+    deleteHashField: (key, field) => {
+      return axiosInstance.delete(`/api/cache-playground/hash/${key}/${field}`);
+    },
   },
-  
+
+  // List operations namespace
+  list: {
+    /**
+     * Add element to left of Redis list
+     * @param {string} key - Redis key
+     * @param {string} value - List value
+     * @returns {Promise} Axios response
+     */
+    leftPush: (key, value) => {
+      return axiosInstance.post('/api/cache-playground/list/left', { key, value });
+    },
+
+    /**
+     * Add element to right of Redis list
+     * @param {string} key - Redis key
+     * @param {string} value - List value
+     * @returns {Promise} Axios response
+     */
+    rightPush: (key, value) => {
+      return axiosInstance.post('/api/cache-playground/list/right', { key, value });
+    },
+
+    /**
+     * Get all elements from Redis list
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response
+     */
+    getList: (key) => {
+      return axiosInstance.get(`/api/cache-playground/list/${key}`);
+    },
+
+    /**
+     * Pop element from left of Redis list
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response
+     */
+    leftPop: (key) => {
+      return axiosInstance.delete(`/api/cache-playground/list/left/${key}`);
+    },
+
+    /**
+     * Pop element from right of Redis list
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response
+     */
+    rightPop: (key) => {
+      return axiosInstance.delete(`/api/cache-playground/list/right/${key}`);
+    },
+  },
+
+  // Set operations namespace
+  set: {
+    /**
+     * Add element to Redis set
+     * @param {string} key - Redis key
+     * @param {string} value - Set value
+     * @returns {Promise} Axios response
+     */
+    addToSet: (key, value) => {
+      return axiosInstance.post('/api/cache-playground/set', { key, value });
+    },
+
+    /**
+     * Get all members of Redis set
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response
+     */
+    getSetMembers: (key) => {
+      return axiosInstance.get(`/api/cache-playground/set/${key}`);
+    },
+
+    /**
+     * Check if element is in Redis set
+     * @param {string} key - Redis key
+     * @param {string} value - Set value
+     * @returns {Promise} Axios response
+     */
+    isSetMember: (key, value) => {
+      return axiosInstance.get(`/api/cache-playground/set/${key}/${value}`);
+    },
+
+    /**
+     * Remove element from Redis set
+     * @param {string} key - Redis key
+     * @param {string} value - Set value
+     * @returns {Promise} Axios response
+     */
+    removeFromSet: (key, value) => {
+      return axiosInstance.delete(`/api/cache-playground/set/${key}/${value}`);
+    },
+  },
+
+  // Sorted set operations namespace
+  sortedSet: {
+    /**
+     * Add element to Redis sorted set with score
+     * @param {string} key - Redis key
+     * @param {string} value - Set value
+     * @param {number} score - Score
+     * @returns {Promise} Axios response
+     */
+    addToSortedSet: (key, value, score) => {
+      return axiosInstance.post('/api/cache-playground/sortedset', { key, value, score });
+    },
+
+    /**
+     * Get all elements from Redis sorted set (ascending)
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response
+     */
+    getSortedSet: (key) => {
+      return axiosInstance.get(`/api/cache-playground/sortedset/${key}`);
+    },
+
+    /**
+     * Get all elements from Redis sorted set (descending)
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response
+     */
+    getSortedSetReverse: (key) => {
+      return axiosInstance.get(`/api/cache-playground/sortedset/${key}/reverse`);
+    },
+
+    /**
+     * Get rank of element in Redis sorted set
+     * @param {string} key - Redis key
+     * @param {string} value - Set value
+     * @returns {Promise} Axios response
+     */
+    getSortedSetRank: (key, value) => {
+      return axiosInstance.get(`/api/cache-playground/sortedset/${key}/${value}/rank`);
+    },
+  },
+
+  // Counter operations namespace
+  counter: {
+    /**
+     * Increment a counter in Redis
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response
+     */
+    increment: (key) => {
+      return axiosInstance.post('/api/cache-playground/counter/increment', { key });
+    },
+
+    /**
+     * Increment counter by specific amount
+     * @param {string} key - Redis key
+     * @param {number} delta - Increment amount
+     * @returns {Promise} Axios response
+     */
+    incrementBy: (key, delta) => {
+      return axiosInstance.post('/api/cache-playground/counter/incrementby', { key, delta });
+    },
+
+    /**
+     * Decrement a counter in Redis
+     * @param {string} key - Redis key
+     * @returns {Promise} Axios response
+     */
+    decrement: (key) => {
+      return axiosInstance.post('/api/cache-playground/counter/decrement', { key });
+    },
+  },
+
   /**
-   * Get a JSON object from Redis
+   * Get Redis server information
+   * @returns {Promise} Axios response with Redis info
    */
-  getJson: async (key) => {
-    const response = await axiosInstance.get(`/api/redis/json/${key}`);
-    return response.data;
+  getInfo: () => {
+    return axiosInstance.get(API_ENDPOINTS.REDIS.INFO);
+  },
+
+  /**
+   * Set Redis key value (direct)
+   * @param {string} key - Redis key
+   * @param {string} value - String value
+   * @returns {Promise} Axios response
+   */
+  set: (key, value) => {
+    return axiosInstance.post(`/api/cache-playground/string`, { key, value });
+  },
+
+  /**
+   * Get Redis key value (direct)
+   * @param {string} key - Redis key
+   * @returns {Promise} Axios response
+   */
+  get: (key) => {
+    return axiosInstance.get(`/api/cache-playground/string/${key}`);
+  },
+
+  /**
+   * Delete Redis key
+   * @param {string} key - Redis key
+   * @returns {Promise} Axios response
+   */
+  delete: (key) => {
+    const url = API_ENDPOINTS.REDIS.DELETE.replace(':key', key);
+    return axiosInstance.delete(url);
+  },
+
+  /**
+   * Flush current database
+   * @returns {Promise} Axios response
+   */
+  flushDb: () => {
+    return axiosInstance.post(API_ENDPOINTS.REDIS.FLUSHDB);
+  },
+
+  /**
+   * Flush all databases
+   * @returns {Promise} Axios response
+   */
+  flushAll: () => {
+    return axiosInstance.post(API_ENDPOINTS.REDIS.FLUSHALL);
+  },
+
+  // Backward compatibility - keep old function names
+  setString: (key, value) => {
+    return axiosInstance.post('/api/cache-playground/string', { key, value });
+  },
+
+  getString: (key) => {
+    return axiosInstance.get(`/api/cache-playground/string/${key}`);
+  },
+
+  setHashField: (key, field, value) => {
+    return axiosInstance.post('/api/cache-playground/hash', { key, field, value });
+  },
+
+  getHashField: (key, field) => {
+    return axiosInstance.get(`/api/cache-playground/hash/${key}/${field}`);
+  },
+
+  getAllHashFields: (key) => {
+    return axiosInstance.get(`/api/cache-playground/hash/${key}`);
+  },
+
+  deleteHashField: (key, field) => {
+    return axiosInstance.delete(`/api/cache-playground/hash/${key}/${field}`);
+  },
+
+  leftPush: (key, value) => {
+    return axiosInstance.post('/api/cache-playground/list/left', { key, value });
+  },
+
+  rightPush: (key, value) => {
+    return axiosInstance.post('/api/cache-playground/list/right', { key, value });
+  },
+
+  getList: (key) => {
+    return axiosInstance.get(`/api/cache-playground/list/${key}`);
+  },
+
+  leftPop: (key) => {
+    return axiosInstance.delete(`/api/cache-playground/list/left/${key}`);
+  },
+
+  rightPop: (key) => {
+    return axiosInstance.delete(`/api/cache-playground/list/right/${key}`);
+  },
+
+  addToSet: (key, value) => {
+    return axiosInstance.post('/api/cache-playground/set', { key, value });
+  },
+
+  getSetMembers: (key) => {
+    return axiosInstance.get(`/api/cache-playground/set/${key}`);
+  },
+
+  isSetMember: (key, value) => {
+    return axiosInstance.get(`/api/cache-playground/set/${key}/${value}`);
+  },
+
+  removeFromSet: (key, value) => {
+    return axiosInstance.delete(`/api/cache-playground/set/${key}/${value}`);
+  },
+
+  addToSortedSet: (key, value, score) => {
+    return axiosInstance.post('/api/cache-playground/sortedset', { key, value, score });
+  },
+
+  getSortedSet: (key) => {
+    return axiosInstance.get(`/api/cache-playground/sortedset/${key}`);
+  },
+
+  getSortedSetReverse: (key) => {
+    return axiosInstance.get(`/api/cache-playground/sortedset/${key}/reverse`);
+  },
+
+  getSortedSetRank: (key, value) => {
+    return axiosInstance.get(`/api/cache-playground/sortedset/${key}/${value}/rank`);
+  },
+
+  increment: (key) => {
+    return axiosInstance.post('/api/cache-playground/counter/increment', { key });
+  },
+
+  incrementBy: (key, delta) => {
+    return axiosInstance.post('/api/cache-playground/counter/incrementby', { key, delta });
+  },
+
+  decrement: (key) => {
+    return axiosInstance.post('/api/cache-playground/counter/decrement', { key });
   },
 };
 
-/**
- * Hash Operations
- */
-export const redisHashApi = {
-  /**
-   * Store a field in a Redis hash
-   */
-  setHashField: async (key, field, value) => {
-    const response = await axiosInstance.post('/api/redis/hash', { key, field, value });
-    return response.data;
-  },
-  
-  /**
-   * Get a field from a Redis hash
-   */
-  getHashField: async (key, field) => {
-    const response = await axiosInstance.get(`/api/redis/hash/${key}/${field}`);
-    return response.data;
-  },
-  
-  /**
-   * Get all fields from a Redis hash
-   */
-  getAllHashFields: async (key) => {
-    const response = await axiosInstance.get(`/api/redis/hash/${key}`);
-    return response.data;
-  },
-  
-  /**
-   * Delete a field from a Redis hash
-   */
-  deleteHashField: async (key, field) => {
-    const response = await axiosInstance.delete(`/api/redis/hash/${key}/${field}`);
-    return response.data;
-  },
-};
-
-/**
- * List Operations
- */
-export const redisListApi = {
-  /**
-   * Add element to left of Redis list
-   */
-  leftPush: async (key, value) => {
-    const response = await axiosInstance.post('/api/redis/list/left', { key, value });
-    return response.data;
-  },
-  
-  /**
-   * Add element to right of Redis list
-   */
-  rightPush: async (key, value) => {
-    const response = await axiosInstance.post('/api/redis/list/right', { key, value });
-    return response.data;
-  },
-  
-  /**
-   * Get all elements from Redis list
-   */
-  getList: async (key) => {
-    const response = await axiosInstance.get(`/api/redis/list/${key}`);
-    return response.data;
-  },
-  
-  /**
-   * Pop element from left of Redis list
-   */
-  leftPop: async (key) => {
-    const response = await axiosInstance.delete(`/api/redis/list/left/${key}`);
-    return response.data;
-  },
-  
-  /**
-   * Pop element from right of Redis list
-   */
-  rightPop: async (key) => {
-    const response = await axiosInstance.delete(`/api/redis/list/right/${key}`);
-    return response.data;
-  },
-};
-
-/**
- * Set Operations
- */
-export const redisSetApi = {
-  /**
-   * Add element to Redis set
-   */
-  addToSet: async (key, value) => {
-    const response = await axiosInstance.post('/api/redis/set', { key, value });
-    return response.data;
-  },
-  
-  /**
-   * Get all members of Redis set
-   */
-  getSetMembers: async (key) => {
-    const response = await axiosInstance.get(`/api/redis/set/${key}`);
-    return response.data;
-  },
-  
-  /**
-   * Check if element is in Redis set
-   */
-  isSetMember: async (key, value) => {
-    const response = await axiosInstance.get(`/api/redis/set/${key}/${value}`);
-    return response.data;
-  },
-  
-  /**
-   * Remove element from Redis set
-   */
-  removeFromSet: async (key, value) => {
-    const response = await axiosInstance.delete(`/api/redis/set/${key}/${value}`);
-    return response.data;
-  },
-};
-
-/**
- * Sorted Set Operations
- */
-export const redisSortedSetApi = {
-  /**
-   * Add element to Redis sorted set with score
-   */
-  addToSortedSet: async (key, value, score) => {
-    const response = await axiosInstance.post('/api/redis/sortedset', { key, value, score });
-    return response.data;
-  },
-  
-  /**
-   * Get all elements from Redis sorted set (ascending)
-   */
-  getSortedSet: async (key) => {
-    const response = await axiosInstance.get(`/api/redis/sortedset/${key}`);
-    return response.data;
-  },
-  
-  /**
-   * Get all elements from Redis sorted set (descending)
-   */
-  getSortedSetReverse: async (key) => {
-    const response = await axiosInstance.get(`/api/redis/sortedset/${key}/reverse`);
-    return response.data;
-  },
-  
-  /**
-   * Get rank of element in Redis sorted set
-   */
-  getSortedSetRank: async (key, value) => {
-    const response = await axiosInstance.get(`/api/redis/sortedset/${key}/${value}/rank`);
-    return response.data;
-  },
-};
-
-/**
- * Counter Operations
- */
-export const redisCounterApi = {
-  /**
-   * Increment a counter in Redis
-   */
-  increment: async (key) => {
-    const response = await axiosInstance.post('/api/redis/counter/increment', { key });
-    return response.data;
-  },
-  
-  /**
-   * Increment counter by specific amount
-   */
-  incrementBy: async (key, delta) => {
-    const response = await axiosInstance.post('/api/redis/counter/incrementby', { key, delta });
-    return response.data;
-  },
-  
-  /**
-   * Decrement a counter in Redis
-   */
-  decrement: async (key) => {
-    const response = await axiosInstance.post('/api/redis/counter/decrement', { key });
-    return response.data;
-  },
-};
-
-/**
- * Key Operations
- */
-export const redisKeyApi = {
-  /**
-   * Get keys matching pattern
-   */
-  getKeysByPattern: async (pattern = '*') => {
-    const response = await axiosInstance.get(`/api/redis/keys/${pattern}`);
-    return response.data;
-  },
-  
-  /**
-   * Delete a key
-   */
-  deleteKey: async (key) => {
-    const response = await axiosInstance.delete(`/api/redis/key/${key}`);
-    return response.data;
-  },
-  
-  /**
-   * Check if key exists
-   */
-  keyExists: async (key) => {
-    const response = await axiosInstance.get(`/api/redis/exists/${key}`);
-    return response.data;
-  },
-  
-  /**
-   * Get key type
-   */
-  getKeyType: async (key) => {
-    const response = await axiosInstance.get(`/api/redis/type/${key}`);
-    return response.data;
-  },
-};
-
-// Export all APIs as a single object
-export default {
-  string: redisStringApi,
-  hash: redisHashApi,
-  list: redisListApi,
-  set: redisSetApi,
-  sortedSet: redisSortedSetApi,
-  counter: redisCounterApi,
-  key: redisKeyApi,
-};
+export default redisApi;

@@ -67,10 +67,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleResourceNotFoundException(ResourceNotFoundException ex) {
         log.error("Resource not found: {}", ex.getMessage());
         
-        ApiResponse<Void> response = ApiResponse.error(
-                ex.getMessage(),
-                HttpStatus.NOT_FOUND.value()
-        );
+        ApiResponse<Void> response = ApiResponse.error(ex.getMessage());
         
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
@@ -133,10 +130,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException ex) {
         log.error("Illegal argument: {}", ex.getMessage());
         
-        ApiResponse<Void> response = ApiResponse.error(
-                ex.getMessage(),
-                HttpStatus.BAD_REQUEST.value()
-        );
+        ApiResponse<Void> response = ApiResponse.error(ex.getMessage());
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -167,10 +161,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Unexpected error occurred", ex);
         
-        ApiResponse<Void> response = ApiResponse.error(
-                "An unexpected error occurred. Please try again later.",
-                HttpStatus.INTERNAL_SERVER_ERROR.value()
-        );
+        ApiResponse<Void> response = ApiResponse.error("An unexpected error occurred. Please try again later.");
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }

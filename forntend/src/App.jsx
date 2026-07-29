@@ -13,6 +13,10 @@ import CounterOperations from './pages/CounterOperations';
 import CachePlayground from './pages/CachePlayground';
 import ListOperations from './pages/ListOperations';
 import SetOperations from './pages/SetOperations';
+import StudentCRUD from './pages/StudentCRUD';
+import PerformanceComparison from './pages/PerformanceComparison';
+import RequestHistory from './pages/RequestHistory';
+import LoadTesting from './pages/LoadTesting';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -23,17 +27,35 @@ const queryClient = new QueryClient({
         if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
           return false;
         }
-        // Retry up to 3 times for other errors
-        return failureCount < 3;
+        // Don't retry on 500 errors (server errors)
+        if (error.status === 500) {
+          return false;
+        }
+        // Don't retry on 4xx client errors
+        if (error.status >= 400 && error.status < 500) {
+          return false;
+        }
+        // Retry up to 2 times for other errors
+        return failureCount < 2;
       },
-      retryDelay: 1000,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000), // Exponential backoff with max 3s
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnReconnect: true,
+      refetchOnMount: false,
     },
     mutations: {
       retry: (failureCount, error) => {
         // Don't retry on CORS/network errors
         if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+          return false;
+        }
+        // Don't retry on 500 errors
+        if (error.status === 500) {
+          return false;
+        }
+        // Don't retry on 4xx client errors
+        if (error.status >= 400 && error.status < 500) {
           return false;
         }
         // Retry once for other errors
@@ -61,6 +83,10 @@ function App() {
             <Route path="/counter-operations" element={<CounterOperations />} />
             <Route path="/cache-playground" element={<CachePlayground />} />
             <Route path="/redis-monitor" element={<RedisMonitor />} />
+            <Route path="/student-crud" element={<StudentCRUD />} />
+            <Route path="/performance-comparison" element={<PerformanceComparison />} />
+            <Route path="/request-history" element={<RequestHistory />} />
+            <Route path="/load-testing" element={<LoadTesting />} />
             {/* Add more routes as we implement them */}
           </Routes>
         </MainLayout>

@@ -8,6 +8,10 @@ import com.example.redisdemo.exception.ResourceNotFoundException;
 import com.example.redisdemo.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,7 +49,7 @@ import java.util.stream.Collectors;
  * - Dependency Injection: Constructor injection for dependencies
  * - Transaction Management: @Transactional for data consistency
  */
-// @Service  // Disabled for Redis-only testing
+@Service
 @RequiredArgsConstructor
 @Slf4j
 public class StudentService {
@@ -84,14 +88,17 @@ public class StudentService {
 
         // Convert DTO to entity manually
         Student student = new Student();
+        student.setRollNumber(createDTO.getRollNumber());
         student.setName(createDTO.getName());
         student.setEmail(createDTO.getEmail());
+        student.setPhone(createDTO.getPhone());
         student.setCourse(createDTO.getCourse());
         student.setBranch(createDTO.getBranch());
         student.setSemester(createDTO.getSemester());
         student.setCgpa(createDTO.getCgpa());
         student.setCity(createDTO.getCity());
-        student.setPhone(createDTO.getPhone());
+        student.setAddress(createDTO.getAddress());
+        student.setStatus(createDTO.getStatus() != null ? createDTO.getStatus() : "ACTIVE");
 
         // Save to database
         Student savedStudent = studentRepository.save(student);
@@ -278,11 +285,17 @@ public class StudentService {
         }
 
         // Update only non-null fields
+        if (updateDTO.getRollNumber() != null) {
+            student.setRollNumber(updateDTO.getRollNumber());
+        }
         if (updateDTO.getName() != null) {
             student.setName(updateDTO.getName());
         }
         if (updateDTO.getEmail() != null) {
             student.setEmail(updateDTO.getEmail());
+        }
+        if (updateDTO.getPhone() != null) {
+            student.setPhone(updateDTO.getPhone());
         }
         if (updateDTO.getCourse() != null) {
             student.setCourse(updateDTO.getCourse());
@@ -299,8 +312,11 @@ public class StudentService {
         if (updateDTO.getCity() != null) {
             student.setCity(updateDTO.getCity());
         }
-        if (updateDTO.getPhone() != null) {
-            student.setPhone(updateDTO.getPhone());
+        if (updateDTO.getAddress() != null) {
+            student.setAddress(updateDTO.getAddress());
+        }
+        if (updateDTO.getStatus() != null) {
+            student.setStatus(updateDTO.getStatus());
         }
 
         // Save to database
@@ -429,16 +445,223 @@ public class StudentService {
     private StudentDTO mapToDTO(Student student) {
         StudentDTO dto = new StudentDTO();
         dto.setId(student.getId());
+        dto.setRollNumber(student.getRollNumber());
         dto.setName(student.getName());
         dto.setEmail(student.getEmail());
+        dto.setPhone(student.getPhone());
         dto.setCourse(student.getCourse());
         dto.setBranch(student.getBranch());
         dto.setSemester(student.getSemester());
         dto.setCgpa(student.getCgpa());
         dto.setCity(student.getCity());
-        dto.setPhone(student.getPhone());
+        dto.setAddress(student.getAddress());
+        dto.setStatus(student.getStatus());
         dto.setCreatedAt(student.getCreatedAt());
         dto.setUpdatedAt(student.getUpdatedAt());
         return dto;
+    }
+
+    /**
+     * Get students with pagination.
+     * 
+     * WHY this method exists:
+     * - Demonstrates pagination for large datasets
+     * - Reduces memory usage
+     * - Improves performance for large result sets
+     * 
+     * WHEN to use this method:
+     * - Displaying students in pages
+     * - Implementing infinite scroll
+     * - Large dataset handling
+     * 
+     * @param page Page number (0-based)
+     * @param size Page size
+     * @param sortBy Field to sort by
+     * @param sortDirection Sort direction (ASC/DESC)
+     * @return Page of students as DTOs
+     */
+    @Transactional(readOnly = true)
+    public Page<StudentDTO> getStudentsWithPagination(int page, int size, String sortBy, String sortDirection) {
+        log.info("Fetching students with pagination - page: {}, size: {}, sortBy: {}, sortDirection: {}", 
+                page, size, sortBy, sortDirection);
+        
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        
+        Page<Student> studentPage = studentRepository.findAll(pageable);
+        
+        log.info("Fetched {} students (page {} of {})", 
+                studentPage.getContent().size(), 
+                studentPage.getNumber() + 1, 
+                studentPage.getTotalPages());
+        
+        return studentPage.map(this::mapToDTO);
+    }
+
+    /**
+     * Search students by name or email.
+     * 
+     * WHY this method exists:
+     * - Demonstrates search functionality
+     * - Common real-world requirement
+     * - Shows caching of search results
+     * 
+     * WHEN to use this method:
+     * - Student search functionality
+     * - Auto-complete features
+     * - Filtering students
+     * 
+     * @param searchTerm The search term
+     * @param page Page number (0-based)
+     * @param size Page size
+     * @return Page of matching students as DTOs
+     */
+    @Transactional(readOnly = true)
+    public Page<StudentDTO> searchStudents(String searchTerm, int page, int size) {
+        log.info("Searching students with term: {}", searchTerm);
+        
+        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
+        Page<Student> studentPage = studentRepository.searchByNameOrEmail(searchTerm, pageable);
+        
+        log.info("Found {} students matching search term: {}", studentPage.getTotalElements(), searchTerm);
+        
+        return studentPage.map(this::mapToDTO);
+    }
+
+    /**
+     * Get students by status.
+     * 
+     * WHY this method exists:
+     * - Demonstrates filtering by status
+     * - Common real-world requirement
+     * - Shows caching of filtered results
+     * 
+     * WHEN to use this method:
+     * - Filtering active/inactive students
+     * - Status-based reports
+     * 
+     * @param status The student status
+     * @return List of students with the specified status
+     */
+    @Transactional(readOnly = true)
+    public List<StudentDTO> getStudentsByStatus(String status) {
+        log.info("Fetching students by status: {}", status);
+        
+        List<Student> students = studentRepository.findByStatus(status);
+        
+        log.info("Fetched {} students with status: {}", students.size(), status);
+        
+        return students.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get student by roll number.
+     * 
+     * WHY this method exists:
+     * - Roll number is a unique identifier
+     * - Common lookup pattern in educational institutions
+     * - Good candidate for caching
+     * 
+     * WHEN to use this method:
+     * - Student profile lookups
+     * - Exam result processing
+     * - Attendance tracking
+     * 
+     * @param rollNumber The roll number
+     * @return The student as DTO
+     * @throws ResourceNotFoundException if student not found
+     */
+    @Transactional(readOnly = true)
+    public StudentDTO getStudentByRollNumber(String rollNumber) {
+        log.info("Fetching student by roll number: {}", rollNumber);
+        
+        Student student = studentRepository.findByRollNumber(rollNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with roll number: " + rollNumber));
+
+        log.info("Student fetched successfully");
+
+        return mapToDTO(student);
+    }
+
+    /**
+     * Bulk insert students.
+     * 
+     * WHY this method exists:
+     * - Demonstrates bulk operations
+     * - Improves performance for multiple inserts
+     * - Common requirement for data import
+     * 
+     * WHEN to use this method:
+     * - Bulk student imports
+     * - Data migration
+     * - Batch processing
+     * 
+     * @param createDTOs List of student creation DTOs
+     * @return List of created students as DTOs
+     */
+    @Transactional
+    public List<StudentDTO> bulkInsertStudents(List<StudentCreateDTO> createDTOs) {
+        log.info("Bulk inserting {} students", createDTOs.size());
+        
+        List<Student> students = createDTOs.stream()
+                .map(this::mapCreateDTOToEntity)
+                .collect(Collectors.toList());
+        
+        List<Student> savedStudents = studentRepository.saveAll(students);
+        
+        log.info("Bulk inserted {} students successfully", savedStudents.size());
+        
+        return savedStudents.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Bulk delete students by IDs.
+     * 
+     * WHY this method exists:
+     * - Demonstrates bulk delete operations
+     * - Improves performance for multiple deletes
+     * - Common requirement for batch cleanup
+     * 
+     * WHEN to use this method:
+     * - Bulk student deletion
+     * - Data cleanup
+     * - Batch processing
+     * 
+     * @param ids List of student IDs to delete
+     */
+    @Transactional
+    public void bulkDeleteStudents(List<Long> ids) {
+        log.info("Bulk deleting {} students", ids.size());
+        
+        List<Student> students = studentRepository.findAllById(ids);
+        studentRepository.deleteAll(students);
+        
+        log.info("Bulk deleted {} students successfully", students.size());
+    }
+
+    /**
+     * Map StudentCreateDTO to Student entity.
+     * 
+     * @param createDTO The creation DTO
+     * @return The Student entity
+     */
+    private Student mapCreateDTOToEntity(StudentCreateDTO createDTO) {
+        Student student = new Student();
+        student.setRollNumber(createDTO.getRollNumber());
+        student.setName(createDTO.getName());
+        student.setEmail(createDTO.getEmail());
+        student.setPhone(createDTO.getPhone());
+        student.setCourse(createDTO.getCourse());
+        student.setBranch(createDTO.getBranch());
+        student.setSemester(createDTO.getSemester());
+        student.setCgpa(createDTO.getCgpa());
+        student.setCity(createDTO.getCity());
+        student.setAddress(createDTO.getAddress());
+        student.setStatus(createDTO.getStatus() != null ? createDTO.getStatus() : "ACTIVE");
+        return student;
     }
 }

@@ -1,5 +1,11 @@
 package com.example.redisdemo.cache;
 
+import com.example.redisdemo.dto.ApiResponse;
+import com.example.redisdemo.dto.StudentDTO;
+import com.example.redisdemo.entity.Student;
+import com.example.redisdemo.exception.ResourceNotFoundException;
+import com.example.redisdemo.metrics.CacheStatisticsService;
+import com.example.redisdemo.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -8,17 +14,17 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.util.Map;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Spring Cache Service
  * 
  * This service demonstrates Spring's declarative caching annotations.
  * This is Phase 4 of the project - Spring Cache Annotations.
- * 
- * NOTE: StudentRepository dependency removed for Redis-only testing
  * 
  * WHY this service exists:
  * - Teaches Spring Cache annotations through practical implementation
@@ -37,13 +43,14 @@ import java.util.Map;
  * - Reduced code complexity
  * - Maintainable caching logic
  */
-// @Service  // Disabled for Redis-only testing
+@Service
 @RequiredArgsConstructor
 @Slf4j
 public class SpringCacheService {
 
-    // Removed StudentRepository dependency for Redis-only testing
     private final RedisTemplate<String, Object> redisTemplate;
+    private final StudentRepository studentRepository;
+    private final CacheStatisticsService cacheStatisticsService;
 
     // ==================== @Cacheable EXAMPLES ====================
 
@@ -56,21 +63,40 @@ public class SpringCacheService {
      * - Cache hit/miss behavior
      * 
      * @param id The student ID
-     * @return The student DTO
+     * @return API response with student data and performance metadata
      */
     @Cacheable(cacheNames = "students", key = "#id")
-    public Object getStudentById(Long id) {
-        log.info("Spring Cache: Fetching student ID: {}", id);
-        log.info("🔄 This method executes only on cache miss");
-        log.info("⚠️ Database operations disabled for Redis-only testing");
+    @Transactional(readOnly = true)
+    public ApiResponse<StudentDTO> getStudentById(Long id) {
+        long startTime = System.currentTimeMillis();
         
-        // Return a placeholder student object
-        return Map.of(
-            "id", id,
-            "name", "Test Student " + id,
-            "email", "test" + id + "@example.com",
-            "message", "Database fetch simulated (Redis-only testing)"
-        );
+        log.info("🟢 SPRING CACHE: Fetching student ID: {}", id);
+        log.info("🔄 This method executes only on cache miss");
+        
+        long dbStartTime = System.currentTimeMillis();
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
+        long dbTime = System.currentTimeMillis() - dbStartTime;
+        
+        StudentDTO studentDTO = mapToDTO(student);
+        long executionTime = System.currentTimeMillis() - startTime;
+        
+        cacheStatisticsService.recordCacheMiss("SPRING", executionTime);
+        
+        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                .executionTime(executionTime + " ms")
+                .databaseTime(dbTime + " ms")
+                .redisTime("0 ms")
+                .cacheHit(false)
+                .cacheMiss(true)
+                .cacheType("SPRING")
+                .dataSource("MYSQL")
+                .timestamp(System.currentTimeMillis())
+                .build();
+        
+        log.info("🟢 SPRING CACHE: Student fetched in {}ms (Database: {}ms)", executionTime, dbTime);
+        
+        return ApiResponse.success(studentDTO, metadata, "Student fetched from database and cached with @Cacheable");
     }
 
     /**
@@ -82,45 +108,82 @@ public class SpringCacheService {
      * - Cache only when ID > 10
      * 
      * @param id The student ID
-     * @return The student DTO
+     * @return API response with student data and performance metadata
      */
     @Cacheable(cacheNames = "students", key = "#id", condition = "#id > 10")
-    public Object getStudentByIdWithCondition(Long id) {
-        log.info("Spring Cache: Fetching student ID: {} with condition (id > 10)", id);
-        log.info("🔄 This method executes only on cache miss AND when condition is true");
-        log.info("⚠️ Database operations disabled for Redis-only testing");
+    @Transactional(readOnly = true)
+    public ApiResponse<StudentDTO> getStudentByIdWithCondition(Long id) {
+        long startTime = System.currentTimeMillis();
         
-        return Map.of(
-            "id", id,
-            "name", "Test Student " + id,
-            "message", "Conditional caching (id > 10)"
-        );
+        log.info("🟢 SPRING CACHE: Fetching student ID: {} with condition (id > 10)", id);
+        log.info("🔄 This method executes only on cache miss AND when condition is true");
+        
+        long dbStartTime = System.currentTimeMillis();
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
+        long dbTime = System.currentTimeMillis() - dbStartTime;
+        
+        StudentDTO studentDTO = mapToDTO(student);
+        long executionTime = System.currentTimeMillis() - startTime;
+        
+        cacheStatisticsService.recordCacheMiss("SPRING", executionTime);
+        
+        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                .executionTime(executionTime + " ms")
+                .databaseTime(dbTime + " ms")
+                .redisTime("0 ms")
+                .cacheHit(false)
+                .cacheMiss(true)
+                .cacheType("SPRING")
+                .dataSource("MYSQL")
+                .timestamp(System.currentTimeMillis())
+                .build();
+        
+        log.info("🟢 SPRING CACHE: Student fetched in {}ms (Database: {}ms)", executionTime, dbTime);
+        
+        return ApiResponse.success(studentDTO, metadata, "Student fetched with conditional caching (id > 10)");
     }
 
     /**
-     * Get student by ID with unless.
+     * Get all students with @Cacheable.
      * 
-     * DEMONSTRATES:
-     * - @Cacheable with unless parameter
-     * - Prevent caching based on result
-     * - Don't cache when CGPA < 6.0
-     * 
-     * @param id The student ID
-     * @return The student DTO
+     * @return API response with all students and performance metadata
      */
-    @Cacheable(cacheNames = "students", key = "#id", unless = "#result.cgpa.compareTo(new BigDecimal('6.0')) < 0")
-    public Object getStudentByIdWithUnless(Long id) {
-        log.info("Spring Cache: Fetching student ID: {} with unless (CGPA < 6.0)", id);
-        log.info("🔄 This method executes only on cache miss");
-        log.info("⚠️ Database operations disabled for Redis-only testing");
+    @Cacheable(cacheNames = "allStudents")
+    @Transactional(readOnly = true)
+    public ApiResponse<List<StudentDTO>> getAllStudents() {
+        long startTime = System.currentTimeMillis();
         
-        // Create a student with low CGPA for testing
-        return Map.of(
-            "id", id,
-            "name", "Test Student " + id,
-            "cgpa", new BigDecimal("5.5"),
-            "message", "Unless caching (CGPA < 6.0 won't be cached)"
-        );
+        log.info("🟢 SPRING CACHE: Fetching all students");
+        log.info("🔄 This method executes only on cache miss");
+        
+        long dbStartTime = System.currentTimeMillis();
+        List<Student> students = studentRepository.findAll();
+        long dbTime = System.currentTimeMillis() - dbStartTime;
+        
+        List<StudentDTO> studentDTOs = students.stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+        
+        long executionTime = System.currentTimeMillis() - startTime;
+        
+        cacheStatisticsService.recordCacheMiss("SPRING", executionTime);
+        
+        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                .executionTime(executionTime + " ms")
+                .databaseTime(dbTime + " ms")
+                .redisTime("0 ms")
+                .cacheHit(false)
+                .cacheMiss(true)
+                .cacheType("SPRING")
+                .dataSource("MYSQL")
+                .timestamp(System.currentTimeMillis())
+                .build();
+        
+        log.info("🟢 SPRING CACHE: Fetched {} students in {}ms (Database: {}ms)", 
+                studentDTOs.size(), executionTime, dbTime);
+        
+        return ApiResponse.success(studentDTOs, metadata, "All students fetched and cached with @Cacheable");
     }
 
     // ==================== @CachePut EXAMPLES ====================
@@ -138,13 +201,53 @@ public class SpringCacheService {
      * @return The updated student DTO
      */
     @CachePut(cacheNames = "students", key = "#id")
-    public Object updateStudent(Long id, Object studentDTO) {
-        log.info("Spring Cache: Updating student ID: {}", id);
+    @Transactional
+    public ApiResponse<StudentDTO> updateStudent(Long id, StudentDTO studentDTO) {
+        long startTime = System.currentTimeMillis();
+        
+        log.info("🟢 SPRING CACHE: Updating student ID: {}", id);
         log.info("🔄 This method ALWAYS executes (unlike @Cacheable)");
         log.info("✅ Result will be cached");
-        log.info("⚠️ Database operations disabled for Redis-only testing");
         
-        return studentDTO;
+        long dbStartTime = System.currentTimeMillis();
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
+        
+        // Update student fields
+        if (studentDTO.getName() != null) student.setName(studentDTO.getName());
+        if (studentDTO.getEmail() != null) student.setEmail(studentDTO.getEmail());
+        if (studentDTO.getPhone() != null) student.setPhone(studentDTO.getPhone());
+        if (studentDTO.getCourse() != null) student.setCourse(studentDTO.getCourse());
+        if (studentDTO.getBranch() != null) student.setBranch(studentDTO.getBranch());
+        if (studentDTO.getSemester() != null) student.setSemester(studentDTO.getSemester());
+        if (studentDTO.getCgpa() != null) student.setCgpa(studentDTO.getCgpa());
+        if (studentDTO.getCity() != null) student.setCity(studentDTO.getCity());
+        if (studentDTO.getAddress() != null) student.setAddress(studentDTO.getAddress());
+        if (studentDTO.getStatus() != null) student.setStatus(studentDTO.getStatus());
+        
+        Student updatedStudent = studentRepository.save(student);
+        long dbTime = System.currentTimeMillis() - dbStartTime;
+        
+        StudentDTO updatedDTO = mapToDTO(updatedStudent);
+        long executionTime = System.currentTimeMillis() - startTime;
+        
+        cacheStatisticsService.recordCacheMiss("SPRING", executionTime);
+        cacheStatisticsService.recordDatabaseWrite("SPRING");
+        
+        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                .executionTime(executionTime + " ms")
+                .databaseTime(dbTime + " ms")
+                .redisTime("0 ms")
+                .cacheHit(false)
+                .cacheMiss(true)
+                .cacheType("SPRING")
+                .dataSource("MYSQL")
+                .timestamp(System.currentTimeMillis())
+                .build();
+        
+        log.info("🟢 SPRING CACHE: Student updated in {}ms (Database: {}ms)", executionTime, dbTime);
+        
+        return ApiResponse.success(updatedDTO, metadata, "Student updated and cache refreshed with @CachePut");
     }
 
     // ==================== @CacheEvict EXAMPLES ====================
@@ -157,11 +260,27 @@ public class SpringCacheService {
      * - Single entry eviction
      * 
      * @param id The student ID
+     * @return API response with eviction result
      */
     @CacheEvict(cacheNames = "students", key = "#id")
-    public void evictStudentCache(Long id) {
-        log.info("Spring Cache: Evicting student cache for ID: {}", id);
+    public ApiResponse<String> evictStudentCache(Long id) {
+        log.info("🟢 SPRING CACHE: Evicting student cache for ID: {}", id);
         log.info("✅ Cache entry will be removed");
+        
+        cacheStatisticsService.recordEviction("SPRING");
+        
+        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                .executionTime("0 ms")
+                .databaseTime("0 ms")
+                .redisTime("0 ms")
+                .cacheHit(false)
+                .cacheMiss(false)
+                .cacheType("SPRING")
+                .dataSource("REDIS")
+                .timestamp(System.currentTimeMillis())
+                .build();
+        
+        return ApiResponse.success("Cache evicted successfully", metadata, "Student cache evicted with @CacheEvict");
     }
 
     /**
@@ -171,11 +290,27 @@ public class SpringCacheService {
      * - @CacheEvict with allEntries
      * - Bulk cache eviction
      * 
+     * @return API response with eviction result
      */
     @CacheEvict(cacheNames = "students", allEntries = true)
-    public void evictAllStudentCache() {
-        log.info("Spring Cache: Evicting all student cache");
+    public ApiResponse<String> evictAllStudentCache() {
+        log.info("🟢 SPRING CACHE: Evicting all student cache");
         log.warn("⚠️ ALL cache entries will be removed");
+        
+        cacheStatisticsService.recordEviction("SPRING");
+        
+        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                .executionTime("0 ms")
+                .databaseTime("0 ms")
+                .redisTime("0 ms")
+                .cacheHit(false)
+                .cacheMiss(false)
+                .cacheType("SPRING")
+                .dataSource("REDIS")
+                .timestamp(System.currentTimeMillis())
+                .build();
+        
+        return ApiResponse.success("All cache evicted successfully", metadata, "All student cache evicted with @CacheEvict");
     }
 
     // ==================== @Caching EXAMPLES ====================
@@ -189,22 +324,68 @@ public class SpringCacheService {
      * - Complex caching strategies
      * 
      * @param id The student ID
-     * @return The student DTO
+     * @return API response with student data and performance metadata
      */
     @Caching(
         cacheable = @Cacheable(cacheNames = "students", key = "#id"),
         evict = @CacheEvict(cacheNames = "allStudents", allEntries = true)
     )
-    public Object getStudentWithComplexCaching(Long id) {
-        log.info("Spring Cache: Complex caching for student ID: {}", id);
-        log.info("🔄 Using @Caching with multiple annotations");
-        log.info("⚠️ Database operations disabled for Redis-only testing");
+    @Transactional(readOnly = true)
+    public ApiResponse<StudentDTO> getStudentWithComplexCaching(Long id) {
+        long startTime = System.currentTimeMillis();
         
-        return Map.of(
-            "id", id,
-            "name", "Test Student " + id,
-            "message", "Complex caching example"
-        );
+        log.info("🟢 SPRING CACHE: Complex caching for student ID: {}", id);
+        log.info("🔄 Using @Caching with multiple annotations");
+        
+        long dbStartTime = System.currentTimeMillis();
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
+        long dbTime = System.currentTimeMillis() - dbStartTime;
+        
+        StudentDTO studentDTO = mapToDTO(student);
+        long executionTime = System.currentTimeMillis() - startTime;
+        
+        cacheStatisticsService.recordCacheMiss("SPRING", executionTime);
+        
+        ApiResponse.Metadata metadata = ApiResponse.Metadata.builder()
+                .executionTime(executionTime + " ms")
+                .databaseTime(dbTime + " ms")
+                .redisTime("0 ms")
+                .cacheHit(false)
+                .cacheMiss(true)
+                .cacheType("SPRING")
+                .dataSource("MYSQL")
+                .timestamp(System.currentTimeMillis())
+                .build();
+        
+        log.info("🟢 SPRING CACHE: Student fetched in {}ms (Database: {}ms)", executionTime, dbTime);
+        
+        return ApiResponse.success(studentDTO, metadata, "Student fetched with complex caching (@Caching)");
+    }
+
+    /**
+     * Map Student entity to StudentDTO.
+     * 
+     * @param student The entity to convert
+     * @return The DTO representation
+     */
+    private StudentDTO mapToDTO(Student student) {
+        StudentDTO dto = new StudentDTO();
+        dto.setId(student.getId());
+        dto.setRollNumber(student.getRollNumber());
+        dto.setName(student.getName());
+        dto.setEmail(student.getEmail());
+        dto.setPhone(student.getPhone());
+        dto.setCourse(student.getCourse());
+        dto.setBranch(student.getBranch());
+        dto.setSemester(student.getSemester());
+        dto.setCgpa(student.getCgpa());
+        dto.setCity(student.getCity());
+        dto.setAddress(student.getAddress());
+        dto.setStatus(student.getStatus());
+        dto.setCreatedAt(student.getCreatedAt());
+        dto.setUpdatedAt(student.getUpdatedAt());
+        return dto;
     }
 
     /**

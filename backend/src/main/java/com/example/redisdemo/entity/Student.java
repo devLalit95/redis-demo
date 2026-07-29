@@ -44,6 +44,13 @@ public class Student {
     private Long id;
 
     /**
+     * Roll number of the student.
+     * Unique identifier within the institution.
+     */
+    @Column(name = "roll_number", unique = true, length = 20)
+    private String rollNumber;
+
+    /**
      * Full name of the student.
      * Cannot be null or empty.
      */
@@ -56,6 +63,12 @@ public class Student {
      */
     @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
+
+    /**
+     * Phone number of the student.
+     */
+    @Column(name = "phone", length = 15)
+    private String phone;
 
     /**
      * Course name (e.g., Computer Science, Mechanical Engineering).
@@ -89,10 +102,16 @@ public class Student {
     private String city;
 
     /**
-     * Phone number of the student.
+     * Full address of the student.
      */
-    @Column(name = "phone", length = 15)
-    private String phone;
+    @Column(name = "address", length = 200)
+    private String address;
+
+    /**
+     * Status of the student (ACTIVE, INACTIVE, GRADUATED, SUSPENDED).
+     */
+    @Column(name = "status", length = 20)
+    private String status;
 
     /**
      * Timestamp when the student record was created.

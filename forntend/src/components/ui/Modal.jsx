@@ -73,13 +73,13 @@ const Modal = ({
     >
       <div
         className={cn(
-          'bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full animate-scale-in',
+          'bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full animate-scale-in flex flex-col max-h-[90vh]',
           sizeStyles[size],
           className
         )}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             {title && (
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {title}
@@ -95,7 +95,7 @@ const Modal = ({
             )}
           </div>
         )}
-        <div className="p-4">{children}</div>
+        <div className="p-4 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>
   );

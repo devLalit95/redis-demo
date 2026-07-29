@@ -125,4 +125,23 @@ const Blockquote = ({ children, className, ...rest }) => {
   );
 };
 
+// Create a Typography component that exports all as defaults
+const Typography = ({ variant = 'p', children, className, ...rest }) => {
+  switch (variant) {
+    case 'h1':
+    case 'h2':
+    case 'h3':
+    case 'h4':
+    case 'h5':
+    case 'h6':
+      const level = parseInt(variant.replace('h', ''));
+      return <Heading level={level} className={className} {...rest}>{children}</Heading>;
+    case 'small':
+      return <Text size="sm" className={className} {...rest}>{children}</Text>;
+    default:
+      return <Text className={className} {...rest}>{children}</Text>;
+  }
+};
+
 export { Heading, Text, Link, Code, Blockquote };
+export default Typography;

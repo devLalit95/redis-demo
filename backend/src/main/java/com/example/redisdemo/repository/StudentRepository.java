@@ -1,6 +1,8 @@
 package com.example.redisdemo.repository;
 
 import com.example.redisdemo.entity.Student;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -51,6 +53,24 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
      * @return Optional containing the student if found
      */
     Optional<Student> findByEmail(String email);
+
+    /**
+     * Find a student by roll number.
+     * 
+     * WHY this method exists:
+     * - Roll number is a unique identifier for students
+     * - Common lookup pattern in educational institutions
+     * - Will be used to demonstrate caching by roll number lookup
+     * 
+     * WHEN to use this method:
+     * - Student profile lookups
+     * - Exam result processing
+     * - Attendance tracking
+     * 
+     * @param rollNumber The roll number to search for
+     * @return Optional containing the student if found
+     */
+    Optional<Student> findByRollNumber(String rollNumber);
 
     /**
      * Find all students by course.
@@ -157,4 +177,77 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
      * @return Number of students in the course
      */
     long countByCourse(String course);
+
+    /**
+     * Find students with pagination and sorting.
+     * 
+     * WHY this method exists:
+     * - Demonstrates pagination support
+     * - Will be used to demonstrate caching of paginated results
+     * - Real-world use case: large dataset handling
+     * 
+     * WHEN to use this method:
+     * - Displaying students in pages
+     * - Implementing infinite scroll
+     * - Reducing memory usage for large datasets
+     * 
+     * @param pageable Pagination and sorting parameters
+     * @return Page of students
+     */
+    Page<Student> findAll(Pageable pageable);
+
+    /**
+     * Search students by name or email containing the search term.
+     * 
+     * WHY this method exists:
+     * - Demonstrates search functionality
+     * - Will be used to demonstrate caching of search results
+     * - Real-world use case: student search
+     * 
+     * WHEN to use this method:
+     * - Student search functionality
+     * - Auto-complete features
+     * - Filtering students
+     * 
+     * @param searchTerm The search term to match in name or email
+     * @param pageable Pagination and sorting parameters
+     * @return Page of matching students
+     */
+    @Query("SELECT s FROM Student s WHERE s.name LIKE %:searchTerm% OR s.email LIKE %:searchTerm%")
+    Page<Student> searchByNameOrEmail(@Param("searchTerm") String searchTerm, Pageable pageable);
+
+    /**
+     * Find students by status.
+     * 
+     * WHY this method exists:
+     * - Demonstrates filtering by status
+     * - Will be used to demonstrate caching of filtered results
+     * - Real-world use case: active student management
+     * 
+     * WHEN to use this method:
+     * - Filtering active/inactive students
+     * - Status-based reports
+     * 
+     * @param status The student status
+     * @return List of students with the specified status
+     */
+    List<Student> findByStatus(String status);
+
+    /**
+     * Find students by course with pagination.
+     * 
+     * WHY this method exists:
+     * - Demonstrates pagination with filtering
+     * - Will be used to demonstrate caching of paginated filtered results
+     * - Real-world use case: course-wise student listing
+     * 
+     * WHEN to use this method:
+     * - Course-wise student pages
+     * - Department-wise reports
+     * 
+     * @param course The course name
+     * @param pageable Pagination and sorting parameters
+     * @return Page of students in the specified course
+     */
+    Page<Student> findByCourse(String course, Pageable pageable);
 }
