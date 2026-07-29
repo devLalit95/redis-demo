@@ -10,8 +10,8 @@ import Loader from '../components/ui/Loader';
 const API_BASE = '/api';
 
 /**
- * Request History Page
- * 
+ * Request History Page (compact layout)
+ *
  * This page displays the history of API requests with performance metrics.
  */
 const RequestHistory = () => {
@@ -64,23 +64,27 @@ const RequestHistory = () => {
   if (isLoading) return <Loader />;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <Typography variant="h2">Request History</Typography>
-        <div className="flex gap-2">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-wrap justify-between items-center gap-2">
+        <Typography variant="h2" className="text-xl font-bold">Request History</Typography>
+        <div className="flex gap-1.5">
           <Button
+            size="sm"
             variant={filter === 'ALL' ? 'primary' : 'secondary'}
             onClick={() => setFilter('ALL')}
           >
             All
           </Button>
           <Button
+            size="sm"
             variant={filter === 'HIT' ? 'primary' : 'secondary'}
             onClick={() => setFilter('HIT')}
           >
             Cache Hits
           </Button>
           <Button
+            size="sm"
             variant={filter === 'MISS' ? 'primary' : 'secondary'}
             onClick={() => setFilter('MISS')}
           >
@@ -89,54 +93,80 @@ const RequestHistory = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card title="Total Requests">
-          <Typography variant="h2">{stats?.totalRequests || 0}</Typography>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card title="Total Requests" className="p-3">
+          <Typography variant="h2" className="text-xl font-bold">{stats?.totalRequests || 0}</Typography>
         </Card>
-        <Card title="Cache Hits">
-          <Typography variant="h2" className="text-green-600">{stats?.cacheHits || 0}</Typography>
+        <Card title="Cache Hits" className="p-3">
+          <Typography variant="h2" className="text-xl font-bold text-green-600 dark:text-green-400">
+            {stats?.cacheHits || 0}
+          </Typography>
         </Card>
-        <Card title="Cache Misses">
-          <Typography variant="h2" className="text-red-600">{stats?.cacheMisses || 0}</Typography>
+        <Card title="Cache Misses" className="p-3">
+          <Typography variant="h2" className="text-xl font-bold text-red-600 dark:text-red-400">
+            {stats?.cacheMisses || 0}
+          </Typography>
         </Card>
-        <Card title="Hit Ratio">
-          <Typography variant="h2" className="text-blue-600">{stats?.hitRatio || '0%'}</Typography>
+        <Card title="Hit Ratio" className="p-3">
+          <Typography variant="h2" className="text-xl font-bold text-blue-600 dark:text-blue-400">
+            {stats?.hitRatio || '0%'}
+          </Typography>
         </Card>
       </div>
 
-      <Card title="Performance Metrics">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-4 bg-gray-50 rounded">
-            <Typography variant="h4">Average Response Time</Typography>
-            <Typography variant="h3">{stats?.averageResponseTime || '0ms'}</Typography>
+      {/* Performance Metrics */}
+      <Card title="Performance Metrics" className="p-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="text-center p-2.5 bg-gray-50 dark:bg-gray-800 rounded-md">
+            <Typography variant="h4" className="text-xs text-gray-500 dark:text-gray-400">
+              Avg Response Time
+            </Typography>
+            <Typography variant="h3" className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              {stats?.averageResponseTime || '0ms'}
+            </Typography>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded">
-            <Typography variant="h4">Redis Reads</Typography>
-            <Typography variant="h3">{stats?.redisReads || 0}</Typography>
+          <div className="text-center p-2.5 bg-gray-50 dark:bg-gray-800 rounded-md">
+            <Typography variant="h4" className="text-xs text-gray-500 dark:text-gray-400">
+              Redis Reads
+            </Typography>
+            <Typography variant="h3" className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              {stats?.redisReads || 0}
+            </Typography>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded">
-            <Typography variant="h4">Redis Writes</Typography>
-            <Typography variant="h3">{stats?.redisWrites || 0}</Typography>
+          <div className="text-center p-2.5 bg-gray-50 dark:bg-gray-800 rounded-md">
+            <Typography variant="h4" className="text-xs text-gray-500 dark:text-gray-400">
+              Redis Writes
+            </Typography>
+            <Typography variant="h3" className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              {stats?.redisWrites || 0}
+            </Typography>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded">
-            <Typography variant="h4">Database Reads</Typography>
-            <Typography variant="h3">{stats?.databaseReads || 0}</Typography>
+          <div className="text-center p-2.5 bg-gray-50 dark:bg-gray-800 rounded-md">
+            <Typography variant="h4" className="text-xs text-gray-500 dark:text-gray-400">
+              Database Reads
+            </Typography>
+            <Typography variant="h3" className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              {stats?.databaseReads || 0}
+            </Typography>
           </div>
         </div>
       </Card>
 
-      <Card title="Cache Statistics by Type">
-        <div className="space-y-4">
+      {/* Cache Statistics by Type */}
+      <Card title="Cache Statistics by Type" className="p-3">
+        <div className="space-y-2">
           {stats?.cacheTypeStats && Object.entries(stats.cacheTypeStats).map(([type, typeStats]) => (
-            <div key={type} className="p-4 border rounded">
-              <div className="flex justify-between items-center mb-2">
-                <Typography variant="h4">{type}</Typography>
-                <Typography variant="small">
-                  Hit Ratio: {typeStats.hitRatio?.toFixed(2)}% |
-                  Avg Time: {typeStats.averageResponseTime?.toFixed(2)}ms
+            <div key={type} className="p-2.5 border border-gray-200 dark:border-gray-700 rounded-md">
+              <div className="flex justify-between items-center mb-1.5">
+                <Typography variant="h4" className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {type}
+                </Typography>
+                <Typography variant="small" className="text-xs text-gray-500 dark:text-gray-400">
+                  Hit Ratio: {typeStats.hitRatio?.toFixed(2)}% | Avg Time: {typeStats.averageResponseTime?.toFixed(2)}ms
                 </Typography>
               </div>
-              <div className="grid grid-cols-4 gap-2 text-sm">
+              <div className="grid grid-cols-4 gap-2 text-xs text-gray-600 dark:text-gray-400">
                 <div>Hits: {typeStats.hits}</div>
                 <div>Misses: {typeStats.misses}</div>
                 <div>Writes: {typeStats.writes}</div>
@@ -147,9 +177,11 @@ const RequestHistory = () => {
         </div>
       </Card>
 
+      {/* Actions */}
       <div className="flex gap-2">
-        <Button onClick={() => window.location.reload()}>Refresh</Button>
+        <Button size="sm" onClick={() => window.location.reload()}>Refresh</Button>
         <Button
+          size="sm"
           variant="secondary"
           onClick={async () => {
             try {
